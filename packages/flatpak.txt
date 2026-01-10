@@ -1,4 +1,3 @@
-flathub
 org.mozilla.firefox
 com.discordapp.Discord
 com.slack.Slack
