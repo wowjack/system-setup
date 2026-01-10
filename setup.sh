@@ -5,9 +5,6 @@
 # -o pipefail: fail if any part of a pipeline fails
 set -euo pipefail
 
-# Capture errors
-trap 'echo -e "${RED}[FATAL]${NC} Script failed at line $LINENO: $BASH_COMMAND" | tee -a "$LOG_FILE"' ERR
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGES_DIR="$SCRIPT_DIR/packages"
 CONFIGS_DIR="$SCRIPT_DIR/configs"
@@ -19,10 +16,11 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-
 source $SCRIPT_DIR/utils.sh
 source $SCRIPT_DIR/flatpak.sh
 
+# Capture errors
+trap 'echo -e "${RED}[FATAL]${NC} Script failed at line $LINENO: $BASH_COMMAND" | tee -a "$LOG_FILE"' ERR
 
 flatpak::install_packages
 
