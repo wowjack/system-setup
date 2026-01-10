@@ -30,7 +30,7 @@ flatpak::install_packages() {
     while IFS= read -r package; do
         [[ -z "$package" ]] && continue
         
-        ((current++))
+        current=$((current + 1))
         log INFO "[$current/$total] Installing $package..."
         
         # Check if already installed

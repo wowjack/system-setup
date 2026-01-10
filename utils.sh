@@ -25,3 +25,18 @@ parse_package_list() {
         grep -v '^#' "$file" | grep -v '^[[:space:]]*$' | sed 's/[[:space:]]*#.*//'
     fi
 }
+
+error_handler() {
+    local exit_code="$1"
+    local line_no="$2"
+    local command="$3"
+    local src="${BASH_SOURCE[1]}"
+
+    log ERROR "Command failed (exit code $exit_code)"
+    log ERROR "File: $src"
+    log ERROR "Line: $line_no"
+    log ERROR "Command: $command"
+
+    exit "$exit_code"
+}
+trap 'error_handler $? $LINENO "$BASH_COMMAND"' ERR
