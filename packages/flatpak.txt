@@ -1,0 +1,15 @@
+flathub
+org.mozilla.firefox
+com.discordapp.Discord
+com.slack.Slack
+us.zoom.Zoom
+com.valvesoftware.Steam
+org.qbittorrent.qBittorrent
+org.videolan.VLC
+com.github.tchx84.Flatseal
+com.obsproject.Studio
+md.obsidian.Obsidian
+org.kde.okular
+org.libreoffice.LibreOffice
+com.bitwarden.desktop
+org.zotero.Zotero
