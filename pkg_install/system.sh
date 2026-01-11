@@ -35,9 +35,9 @@ system::detect_pkg_manager() {
 system::pkg_update() {
     log INFO "Updating system package registry."
     case "$PKG_MANAGER" in
-        apt) apt update ;;
-        dnf) dnf check-update || true ;;
-        pacman) pacman -Su --noconfirm ;;
+        apt) sudo apt update ;;
+        dnf) sudo dnf check-update || true ;;
+        pacman) sudo pacman -Su --noconfirm ;;
     esac
 }
 
