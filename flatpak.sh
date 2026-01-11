@@ -39,9 +39,6 @@ flatpak::install_packages() {
             continue
         fi
         
-        # Install non-interactively
-        # -y: assume yes
-        # --noninteractive: don't prompt for anything
         if flatpak install --noninteractive -y flathub "$package" 2>> "$LOG_FILE"; then
             log OK "Installed $package"
         else

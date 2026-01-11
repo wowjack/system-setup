@@ -61,7 +61,7 @@ Install useful packages and applications to reduce the overhead of setting up a 
 * ffmpeg
 
 #### Fonts
-* jetbrains mono nerd font
+* nerd font
 
 
 ### Security & Networking

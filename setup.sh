@@ -16,8 +16,11 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-source $SCRIPT_DIR/utils.sh
-source $SCRIPT_DIR/flatpak.sh
+source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/flatpak.sh"
+source "$SCRIPT_DIR/wallpaper.sh"
+
+log INFO "Starting setup script."
 
 
 flatpak::install_packages
