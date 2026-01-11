@@ -1,0 +1,6 @@
+git
+tmux
+tree
+curl
+wget
+neovim
