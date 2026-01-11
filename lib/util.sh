@@ -30,7 +30,7 @@ command_exists() {
 }
 
 # Parse a package list file, stripping comments and empty lines
-parse_package_list() {
+parse_package_file() {
     local file="$1"
     if [[ -f "$file" ]]; then
         grep -v '^#' "$file" | grep -v '^[[:space:]]*$' | sed 's/[[:space:]]*#.*//'

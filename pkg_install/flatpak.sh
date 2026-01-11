@@ -21,7 +21,7 @@ flatpak::install_packages() {
     fi
     
     # Read packages and install
-    local packages=$(parse_package_list "$flatpak_file")
+    local packages=$(parse_package_file "$flatpak_file")
 
     local total=$(echo "$packages" | wc -l)
     local current=0

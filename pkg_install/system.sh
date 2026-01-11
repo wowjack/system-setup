@@ -50,9 +50,10 @@ system::install_packages() {
     system::detect_pkg_manager
     system::pkg_update
 
-    local package_file=$("$PACKAGES_DIR/system-$PKG_MANAGER.txt")
+    local packages=$(
+        parse_package_file "$PACKAGES_DIR/system-common.txt"
+        parse_package_file "$PACKAGES_DIR/system-$PKG_MANAGER.txt"
+    )
 
-    local packages=$(cat "$PACKAGES_DIR/system-common.txt" "$package_file" 2> /dev/null | parse_package_list)
-
-    echo packages
+    echo $packages
 }
