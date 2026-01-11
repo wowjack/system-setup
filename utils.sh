@@ -83,7 +83,7 @@ detect_pkg_manager() {
 
 
 pkg_update() {
-    case "$PKG_MANAGER" install
+    case "$PKG_MANAGER" in
         apt) apt update ;;
         dnf) dnf check-update || true ;;
         pacman) pacman -Su --noconfirm ;;
