@@ -1,3 +1,16 @@
+# Common utility functions and scripts
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PACKAGES_DIR="$SCRIPT_DIR/packages"
+CONFIGS_DIR="$SCRIPT_DIR/configs"
+LOG_FILE="$SCRIPT_DIR/setup.log"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
 log() {
     local level="$1"
     shift
@@ -51,41 +64,3 @@ while true; do
 done 2>/dev/null &
 
 
-detect_pkg_manager() {
-    if [[ -f /etc/os-release ]]; then
-        source /etc/os-release
-    else
-        log INFO "/etc/os-release does not exist. Distro unknown."
-        ID="unknown"
-    fi
-
-    case "$ID" in
-        debian|ubuntu) PKG_MANAGER="apt" ;;
-        fedora) PKG_MANAGER="dnf" ;;
-        arch) PKG_MANAGER="pacman" ;;
-        unknown|*)
-            log INFO "Distro unknown: $ID. Detecting package manager via command_exists fallback."
-            if command_exists apt; then
-                PKG_MANAGER="apt"
-            elif command_exists dnf; then
-                PKG_MANAGER="dnf"
-            elif command_exists pacman; then
-                PKG_MANAGER="pacman"
-            else
-                log ERROR "No supported package manager found."
-                return 1
-            fi
-            ;;
-    esac
-
-    log INFO "Detected distro: $ID (package manager: $PKG_MANAGER)"
-}
-
-
-pkg_update() {
-    case "$PKG_MANAGER" in
-        apt) apt update ;;
-        dnf) dnf check-update || true ;;
-        pacman) pacman -Su --noconfirm ;;
-    esac
-}

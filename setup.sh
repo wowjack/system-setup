@@ -5,25 +5,14 @@
 # -o pipefail: fail if any part of a pipeline fails
 set -Eeuo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES_DIR="$SCRIPT_DIR/packages"
-CONFIGS_DIR="$SCRIPT_DIR/configs"
-LOG_FILE="$SCRIPT_DIR/setup.log"
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-source "$SCRIPT_DIR/utils.sh"
-source "$SCRIPT_DIR/flatpak.sh"
+source "$SCRIPT_DIR/lib/util.sh"
+source "$SCRIPT_DIR/pkg_install/install.sh"
 source "$SCRIPT_DIR/wallpaper.sh"
 
 log INFO "Starting setup script."
 
-# install all flatpak packages from flatpak.txt
-flatpak::install_packages
+# Install all system, flatpak, and custom packages
+install_packages
 
 # fetch and set the nice wallpaper I like
 wallpaper::install

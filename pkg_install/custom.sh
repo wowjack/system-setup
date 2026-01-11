@@ -5,3 +5,8 @@
 #   go
 #   java
 #   python
+
+
+custom::install_packages() {
+    log INFO "Installing custom packages."
+}
