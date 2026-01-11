@@ -1,6 +1,10 @@
 git
 tmux
 tree
+btop
 curl
 wget
 neovim
+openssh
+ffmpeg
+virt-manager
