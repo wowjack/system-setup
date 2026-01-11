@@ -73,7 +73,7 @@ detect_pkg_manager() {
                 PKG_MANAGER="pacman"
             else
                 log ERROR "No supported package manager found."
-                exit 1
+                return 1
             fi
             ;;
     esac
