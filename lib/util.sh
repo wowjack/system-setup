@@ -33,7 +33,7 @@ command_exists() {
 parse_package_file() {
     local file="$1"
     if [[ -f "$file" ]]; then
-        grep -v '^#' "$file" | grep -v '^[[:space:]]*$' | sed 's/[[:space:]]*#.*//'
+        sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file"
     fi
 }
 
