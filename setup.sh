@@ -5,6 +5,8 @@
 # -o pipefail: fail if any part of a pipeline fails
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 source "$SCRIPT_DIR/lib/util.sh"
 source "$SCRIPT_DIR/pkg_install/install.sh"
 source "$SCRIPT_DIR/wallpaper.sh"

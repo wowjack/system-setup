@@ -1,7 +1,5 @@
 # Common utility functions and scripts
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PACKAGES_DIR="$SCRIPT_DIR/packages"
 CONFIGS_DIR="$SCRIPT_DIR/configs"
 LOG_FILE="$SCRIPT_DIR/setup.log"
 
