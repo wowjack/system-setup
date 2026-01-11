@@ -1,6 +1,5 @@
 # Common utility functions and scripts
 
-CONFIGS_DIR="$SCRIPT_DIR/configs"
 LOG_FILE="$SCRIPT_DIR/setup.log"
 
 RED='\033[0;31m'

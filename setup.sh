@@ -9,15 +9,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$SCRIPT_DIR/lib/util.sh"
 source "$SCRIPT_DIR/pkg_install/install.sh"
-source "$SCRIPT_DIR/wallpaper.sh"
+source "$SCRIPT_DIR/customize/customize.sh"
 
 log INFO "Starting setup script."
 
 # Install all system, flatpak, and custom packages
 install_packages
 
-# fetch and set the nice wallpaper I like
-wallpaper::install
+install_customization
 
 
 echo ""

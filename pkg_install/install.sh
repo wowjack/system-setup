@@ -1,4 +1,5 @@
 PACKAGES_DIR="$SCRIPT_DIR/packages"
+PKG_INSTALL_DIR="$SCRIPT_DIR/pkg_install"
 
 source "$SCRIPT_DIR/pkg_install/system.sh"
 source "$SCRIPT_DIR/pkg_install/flatpak.sh"
