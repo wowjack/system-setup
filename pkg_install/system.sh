@@ -45,6 +45,29 @@ system::pkg_upgrade() {
     log INFO "Upgrading system packages."
 }
 
+
+apt::install_package() {
+    local pkg="$1"
+
+    if dpkg -s "$pkg" &> /dev/null; then
+        log OK "$pkg is already installed"
+    elif sudo apt install -y "$pkg" 2>> "$LOG_FILE"; then
+        log OK "Installed $pkg"
+    else
+        log ERROR "Failed to install $pkg"
+        failed+=("$pkg")
+    fi
+}
+
+dnf::install_package() {
+    return 1
+}
+
+pacman::install_package() {
+    return 1
+}
+
+
 system::install_packages() {
     log INFO "Installing system packages."
     system::detect_pkg_manager
@@ -55,5 +78,30 @@ system::install_packages() {
         parse_package_file "$PACKAGES_DIR/system-$PKG_MANAGER.txt"
     )
 
-    echo $packages
+    local total=$(echo "$packages" | wc -l)
+    local current=0
+    local failed=()
+    
+    while IFS= read -r package; do
+        [[ -z "$package" ]] && continue
+        
+        current=$((current + 1))
+        log INFO "[$current/$total] Installing $package..."
+
+        "$PKG_MANAGER"::install_package "$package"
+        
+    done <<< "$packages"
+    
+    # Summary
+    echo ""
+    log INFO "$PKG_MANAGER installation complete"
+    if [[ ${#failed[@]} -gt 0 ]]; then
+        log WARN "Failed to install ${#failed[@]} package(s):"
+        for pkg in "${failed[@]}"; do
+            log WARN "  - $pkg"
+        done
+        return 1
+    fi
+    
+    return 0
 }
