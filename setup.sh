@@ -22,8 +22,11 @@ source "$SCRIPT_DIR/wallpaper.sh"
 
 log INFO "Starting setup script."
 
-
+# install all flatpak packages from flatpak.txt
 flatpak::install_packages
+
+# fetch and set the nice wallpaper I like
+wallpaper::install
 
 
 echo ""

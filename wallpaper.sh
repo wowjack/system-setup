@@ -1,6 +1,6 @@
 wallpaper::install() {
-    local src = "https://github.com/fedoradesign/backgrounds/blob/f40-backgrounds/default/f40-01-night.png?raw=true"
-    local dst = "/usr/share/backgrounds/f40-01-night.png"
+    local src="https://github.com/fedoradesign/backgrounds/blob/f40-backgrounds/default/f40-01-night.png?raw=true"
+    local dst="/usr/share/backgrounds/f40-01-night.png"
 
     sudo curl -fL "$src" -o "$dst"
 
