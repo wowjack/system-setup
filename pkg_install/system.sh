@@ -43,6 +43,7 @@ system::pkg_update() {
 
 system::pkg_upgrade() {
     log INFO "Upgrading system packages."
+    return 1
 }
 
 
