@@ -31,9 +31,10 @@ command_exists() {
 # Parse a package list file, stripping comments and empty lines
 parse_package_file() {
     local file="$1"
-    if [[ -f "$file" ]]; then
-        sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$file"
-    fi
+    [[ -f "$file" ]] || return 1
+    sed -e 's/#.*//' \
+        -e '/^[[:space:]]*$/d' \
+        -e '${/^$/!s/$/\n/}' "$file"
 }
 
 error_handler() {
