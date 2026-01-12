@@ -21,32 +21,16 @@ flatpak::install_packages() {
     fi
     
     # Read packages and install
-    local packages=$(parse_package_file "$flatpak_file")
+    mapfile -t packages < <(parse_package_file "$flatpak_file")
 
-    local total=$(echo "$packages" | wc -l)
-    local current=0
+    local total=${#packages[@]}
     local failed=()
     
-    while IFS= read -r package; do
-        [[ -z "$package" ]] && continue
-        
-        current=$((current + 1))
-        log INFO "[$current/$total] Installing $package..."
-        
-        # Check if already installed
-        if flatpak list --app --columns=application | grep -q "^${package}$"; then
-            log OK "$package is already installed"
-            continue
-        fi
-        
-        if flatpak install --noninteractive -y flathub "$package" 2>> "$LOG_FILE"; then
-            log OK "Installed $package"
-        else
-            log ERROR "Failed to install $package"
-            failed+=("$package")
-        fi
-        
-    done <<< "$packages"
+    for i in "${!packages[@]}"; do
+        local package=${packages[i]}
+        log INFO "[$((i + 1))/$total] Installing $package..."
+        flatpak::install_package "$package"
+    done
     
     # Summary
     echo ""
@@ -60,4 +44,19 @@ flatpak::install_packages() {
     fi
     
     return 0
+}
+
+
+
+flatpak::install_package() {
+    local pkg="$1"
+    # Check if already installed
+    if flatpak list --app --columns=application | grep -q "^${pkg}$"; then
+        log OK "$package is already installed"
+    elif flatpak install --noninteractive -y flathub "$pkg" 2>> "$LOG_FILE"; then
+        log OK "Installed $pkg"
+    else
+        log ERROR "Failed to install $pkg"
+        failed+=("$pkg")
+    fi
 }

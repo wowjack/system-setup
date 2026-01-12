@@ -73,24 +73,19 @@ system::install_packages() {
     system::detect_pkg_manager
     system::pkg_update
 
-    local packages=$(
+    mapfile -t packages < <(
         parse_package_file "$PACKAGES_DIR/system-common.txt"
         parse_package_file "$PACKAGES_DIR/system-$PKG_MANAGER.txt"
     )
 
-    local total=$(echo "$packages" | wc -l)
-    local current=0
+    local total=${#packages[@]}
     local failed=()
-    
-    while IFS= read -r package; do
-        [[ -z "$package" ]] && continue
-        
-        current=$((current + 1))
-        log INFO "[$current/$total] Installing $package..."
 
+    for i in "${!packages[@]}"; do
+        local package=${packages[i]}
+        log INFO "[$((i + 1))/$total] Installing $package..."
         "$PKG_MANAGER"::install_package "$package"
-        
-    done <<< "$packages"
+    done
     
     # Summary
     echo ""
