@@ -23,7 +23,7 @@ def apt_install(pkg: str):
 def dnf_update():
     run("sudo dnf -q makecache")
 def dnf_check_package_exists(pkg: str) -> bool:
-    return run(f"rpm -q {pkg}", check=False, stdout=subprocess.DEVNULL).returncode == 0
+    return run(f"rpm -q {pkg}", check=False).returncode == 0
 def dnf_install(pkg: str):
     run(f"sudo dnf -yq install {pkg}")
 
@@ -48,13 +48,17 @@ def install_packages():
     update()
 
     logging.info(f"Installing {PKG_MANAGER} packages.")
-    for pkg in PACKAGES:
+
+    total = len(PACKAGES)
+    for (num, pkg) in enumerate(PACKAGES):
+        logging.info(f"[{num+1}/{total}] Installing {pkg}")
+
         if check(pkg):
-            logging.info(f"{pkg} already installed.")
+            logging.debug(f"{pkg} already installed.")
             continue
 
         install(pkg)
-        logging.info(f"{pkg} installed successfully.")
+        logging.debug(f"{pkg} installed successfully.")
 
 
 

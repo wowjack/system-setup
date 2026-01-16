@@ -7,14 +7,18 @@ PACKAGE_FILE: Path = f"{PACKAGES_DIR}/flatpak.txt"
 PACKAGES = read_package_file(PACKAGE_FILE)
 
 def install_packages():
-    logging.info("Installing flatpak packages.")
-    
-    run("flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo", check=False)
+    logging.info("Adding flathub remote")
+    run("flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo")
 
-    for pkg in PACKAGES:
-        if run(f"flatpak info {pkg}", check=False, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE) == 0:
-            logging.info(f"{pkg} already installed.")
+    logging.info("Installing flatpak packages.")
+
+    total = len(PACKAGES)
+    for (num, pkg) in enumerate(PACKAGES):
+        logging.info(f"[{num+1}/{total}] Installing {pkg}")
+
+        if run(f"flatpak info --user {pkg}", check=False).returncode == 0:
+            logging.debug(f"{pkg} already installed.")
             continue
 
-        run(f"flatpak install --noninteractive -y flathub {pkg}")
-        logging.info(f"{pkg} installed successfully.")
+        run(f"flatpak install --user --noninteractive -y flathub {pkg}")
+        logging.debug(f"{pkg} installed successfully.")

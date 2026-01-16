@@ -6,7 +6,6 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 source "$SCRIPT_DIR/util.sh"
 
 log INFO "Starting install script."
@@ -28,5 +27,6 @@ case "$PKG_MANAGER" in
         sudo pacman -Sy --noconfirm python
         ;;
 esac
+log INFO "Python successfully installed."
 
 exec python3 "$SCRIPT_DIR/install.py" --pkg-manager "$PKG_MANAGER"

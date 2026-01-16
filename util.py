@@ -12,67 +12,59 @@ CUSTOMIZE_DIR: Path = f"{SCRIPT_DIR}/customize"
 
 def setup_logging():
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
     logger.handlers.clear()
-
-    # ANSI colors (same as your Bash script)
-    BLUE = "\033[94m"
-    YELLOW = "\033[93m"
-    RED = "\033[91m"
-    NC = "\033[0m"
-    class ColorFormatter(logging.Formatter):
-        COLORS = {
-            logging.INFO: BLUE,
-            logging.WARNING: YELLOW,
-            logging.ERROR: RED,
-            logging.CRITICAL: RED,
-        }
-        def format(self, record: logging.LogRecord) -> str:
-            color = self.COLORS.get(record.levelno, NC)
-            record.levelname = f"{color}{record.levelname}{NC}"
-            return super().format(record)
 
     fmt = "[%(asctime)s] [%(levelname)s] %(message)s"
     datefmt = "%Y-%m-%d %H:%M:%S"
 
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(ColorFormatter(fmt, datefmt))
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter(fmt, datefmt))
     logger.addHandler(console_handler)
 
     file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(fmt, datefmt))
     logger.addHandler(file_handler)
 setup_logging()
 
 
 
-def run(cmd: str, capture=False, check=True, stdout=None, stderr=None) -> subprocess.CompletedProcess:
+def run(cmd: str, check=True) -> subprocess.CompletedProcess:
     cmd = cmd.split()
-    
     try:
-        return subprocess.run(
+        result = subprocess.run(
             cmd,
-            check=check,
             text=True,
-            capture_output=capture,
-            stdout=stdout,
-            stderr=stderr
+            check=check,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
     except subprocess.CalledProcessError as e:
-        if check:
-            logging.error(f"Command failed: {' '.join(cmd)}")
-            sys.exit(e.returncode)
-        return e
+        # Throw error if check is true
+        logging.error(f"Error running command: {' '.join(cmd)}")
+        logging.error(e.stderr.strip())
+        sys.exit(e.returncode)
+
+    if result.stderr:
+        logging.debug(result.stderr.strip())
+
+    if result.stdout:
+        logging.debug(result.stdout.strip())
+
+    return result
 
 
-def read_package_file(path: Path) -> list[str]:
-    path = Path(path)
-    if not path.is_file():
-        logging.error(f"{path} does not exist.")
+def read_package_file(file_path: Path) -> list[str]:
+    file_path = Path(file_path)
+    if not file_path.is_file():
+        logging.error(f"{file_path} does not exist.")
         exit(1)
     
     lines = []
-    with path.open() as f:
+    with file_path.open() as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#"):

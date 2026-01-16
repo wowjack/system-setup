@@ -1,12 +1,6 @@
 # Common utility functions and scripts
 
-LOG_FILE="$SCRIPT_DIR/setup.log"
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+LOG_FILE="$SCRIPT_DIR/install.log"
 
 log() {
     local level="$1"
@@ -15,10 +9,10 @@ log() {
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     case "$level" in
-        INFO)  echo -e "${BLUE}[INFO]${NC} $message" ;;
-        OK)    echo -e "${GREEN}[OK]${NC} $message" ;;
-        WARN)  echo -e "${YELLOW}[WARN]${NC} $message" ;;
-        ERROR) echo -e "${RED}[ERROR]${NC} $message" ;;
+        INFO)  echo -e "[INFO] $message" ;;
+        OK)    echo -e "$[OK] $message" ;;
+        WARN)  echo -e "$[WARN] $message" ;;
+        ERROR) echo -e "[ERROR] $message" ;;
     esac
     
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
