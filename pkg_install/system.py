@@ -1,0 +1,61 @@
+import argparse
+import subprocess
+from util import PACKAGES_DIR, run, read_package_file
+from pathlib import Path
+import logging
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--pkg-manager", choices=["apt", "dnf", "pacman"], required=True)
+PKG_MANAGER = parser.parse_args().pkg_manager
+
+COMMON_PACKAGE_FILE: Path = f"{PACKAGES_DIR}/system-common.txt"
+PACKAGE_FILE: Path = f"{PACKAGES_DIR}/system-{PKG_MANAGER}.txt"
+PACKAGES = read_package_file(COMMON_PACKAGE_FILE) + read_package_file(PACKAGE_FILE)
+
+
+def apt_update():
+    run("sudo apt update")
+def apt_check_package_exists(pkg: str) -> bool:
+    return run(f"dpkg -s {pkg}", check=False).returncode == 0
+def apt_install(pkg: str):
+    run(f"sudo apt install -y {pkg}")
+
+def dnf_update():
+    run("sudo dnf -q makecache")
+def dnf_check_package_exists(pkg: str) -> bool:
+    return run(f"rpm -q {pkg}", check=False, stdout=subprocess.DEVNULL).returncode == 0
+def dnf_install(pkg: str):
+    run(f"sudo dnf -yq install {pkg}")
+
+def pacman_update():
+    run("sudo pacman -Sy")
+def pacman_check_package_exists(pkg: str) -> bool:
+    return run(f"pacman -Qi {pkg}", check=False).returncode == 0
+def pacman_install(pkg: str):
+    run(f"sudo pacman -S --noconfirm {pkg}")
+
+PKG_FUNCS = {
+    "apt": (apt_update, apt_check_package_exists, apt_install),
+    "dnf": (dnf_update, dnf_check_package_exists, dnf_install),
+    "pacman": (pacman_update, pacman_check_package_exists, pacman_install)
+}
+
+
+def install_packages():
+    (update, check, install) = PKG_FUNCS[PKG_MANAGER] 
+
+    logging.info(f"Updating {PKG_MANAGER} packages.")
+    update()
+
+    logging.info(f"Installing {PKG_MANAGER} packages.")
+    for pkg in PACKAGES:
+        if check(pkg):
+            logging.info(f"{pkg} already installed.")
+            continue
+
+        install(pkg)
+        logging.info(f"{pkg} installed successfully.")
+
+
+
+    

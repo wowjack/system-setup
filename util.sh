@@ -28,15 +28,6 @@ command_exists() {
     command -v "$1" &> /dev/null
 }
 
-# Parse a package list file, stripping comments and empty lines
-parse_package_file() {
-    local file="$1"
-    [[ -f "$file" ]] || return 1
-    sed -e 's/#.*//' \
-        -e '/^[[:space:]]*$/d' \
-        -e '${/^$/!s/$/\n/}' "$file"
-}
-
 error_handler() {
     local exit_code="$1"
     local line_no="$2"
@@ -53,6 +44,36 @@ error_handler() {
 trap 'error_handler $? $LINENO "$BASH_COMMAND"' ERR
 
 
+detect_system_package_manager() {
+    log INFO "Detecting system package manager"
+    if [[ -f /etc/os-release ]]; then
+        source /etc/os-release
+    else
+        log INFO "/etc/os-release does not exist. Distro unknown."
+        ID="unknown"
+    fi
+    case "$ID" in
+        debian|ubuntu) PKG_MANAGER="apt" ;;
+        fedora) PKG_MANAGER="dnf" ;;
+        arch) PKG_MANAGER="pacman" ;;
+        unknown|*)
+            log INFO "Distro unknown: $ID. Detecting package manager via command_exists fallback."
+            if command_exists apt; then
+                PKG_MANAGER="apt"
+            elif command_exists dnf; then
+                PKG_MANAGER="dnf"
+            elif command_exists pacman; then
+                PKG_MANAGER="pacman"
+            else
+                log ERROR "No supported package manager found."
+                return 1
+            fi
+            ;;
+    esac
+    log INFO "Detected distro: $ID (package manager: $PKG_MANAGER)"
+}
+
+
 # Request password once and keep auth cred alive until the script exits
 sudo -v
 while true; do
@@ -60,5 +81,3 @@ while true; do
   sleep 60
   kill -0 "$$" || exit
 done 2>/dev/null &
-
-

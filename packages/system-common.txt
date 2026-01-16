@@ -3,7 +3,8 @@ tmux
 tree
 btop
 curl
-wget
+wget2
 neovim
 ffmpeg
 virt-manager
+flatpak
