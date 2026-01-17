@@ -8,7 +8,7 @@ PACKAGES = read_package_file(PACKAGE_FILE)
 
 def install_packages():
     logging.info("Adding flathub remote")
-    run("flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo")
+    run("flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo")
 
     logging.info("Installing flatpak packages.")
 

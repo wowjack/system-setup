@@ -4,10 +4,11 @@ from pathlib import Path
 import logging
 
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
-LOG_FILE: Path = f"{SCRIPT_DIR}/install.log"
-PACKAGES_DIR: Path = f"{SCRIPT_DIR}/packages"
-CONFIGS_DIR: Path = f"{SCRIPT_DIR}/configs"
-CUSTOMIZE_DIR: Path = f"{SCRIPT_DIR}/customize"
+LOG_FILE: Path = Path(f"{SCRIPT_DIR}/install.log")
+PACKAGES_DIR: Path = Path(f"{SCRIPT_DIR}/packages")
+CONFIGS_DIR: Path = Path(f"{SCRIPT_DIR}/configs")
+CUSTOMIZE_DIR: Path = Path(f"{SCRIPT_DIR}/customize")
+MEDIA_DIR: Path = Path(f"{SCRIPT_DIR}/media")
 
 
 def setup_logging():

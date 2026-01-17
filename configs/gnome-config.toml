@@ -1,0 +1,28 @@
+["org.gnome.desktop.background"]
+picture-uri = "file://${MEDIA_DIR}/f40-01-night.png"
+picture-uri-dark = "file://${MEDIA_DIR}/f40-01-night.png"
+
+["org.gnome.desktop.interface"]
+color-scheme = "prefer-dark"
+clock-show-weekday = true
+clock-show-seconds = false
+enable-hot-corners = true
+show-battery-percentage = true
+
+["org.gnome.nautilus.preferences"]
+show-hidden-files = true
+default-folder-viewer = "list-view"
+
+["org.gnome.mutter"]
+center-new-windows = true
+attach-modal-dialogs = false
+
+["org.gnome.desktop.peripherals.touchpad"]
+tap-to-click = true
+natural-scroll = true
+
+["org.gnome.desktop.wm.preferences"]
+button-layout = "close,minimize,maximize:appmenu"
+
+["org.gnome.desktop.input-sources"]
+# xkb-options = ["caps:escape"]
