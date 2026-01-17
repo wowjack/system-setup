@@ -16,8 +16,7 @@ def customize():
         for key, val in keys.items():
             val = format_val(val)
             logging.debug(f"Setting {schema} {key} to {val}")
-            logging.debug(f"gsettings set {schema} {key} {val}")
-            #run(f"gsettings set {schema} {key} {val}")
+            run(f"gsettings set {schema} {key} {val}")
     
     
 def format_val(val):
