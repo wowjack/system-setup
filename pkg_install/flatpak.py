@@ -3,7 +3,7 @@ from util import PACKAGES_DIR, read_package_file, run
 from pathlib import Path
 import logging
 
-PACKAGE_FILE: Path = f"{PACKAGES_DIR}/flatpak.txt"
+PACKAGE_FILE: Path = PACKAGES_DIR / "flatpak.txt"
 PACKAGES = read_package_file(PACKAGE_FILE)
 
 def install_packages():

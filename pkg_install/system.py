@@ -1,5 +1,4 @@
 import argparse
-import subprocess
 from util import PACKAGES_DIR, run, read_package_file
 from pathlib import Path
 import logging
@@ -8,8 +7,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--pkg-manager", choices=["apt", "dnf", "pacman"], required=True)
 PKG_MANAGER = parser.parse_args().pkg_manager
 
-COMMON_PACKAGE_FILE: Path = f"{PACKAGES_DIR}/system-common.txt"
-PACKAGE_FILE: Path = f"{PACKAGES_DIR}/system-{PKG_MANAGER}.txt"
+COMMON_PACKAGE_FILE: Path = PACKAGES_DIR / "system-common.txt"
+PACKAGE_FILE: Path = PACKAGES_DIR / f"system-{PKG_MANAGER}.txt"
 PACKAGES = read_package_file(COMMON_PACKAGE_FILE) + read_package_file(PACKAGE_FILE)
 
 

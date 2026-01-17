@@ -1,0 +1,1 @@
+# Install .tmux.conf file and install tmux-continuum to persist across reboots

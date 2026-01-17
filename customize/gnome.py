@@ -3,7 +3,7 @@ from util import run, CONFIGS_DIR, MEDIA_DIR
 from pathlib import Path
 import tomllib
 
-CONFIG_FILE = Path(f"{CONFIGS_DIR}/gnome-config.toml")
+CONFIG_FILE = CONFIGS_DIR / "gnome-config.toml"
 
 
 def customize():
