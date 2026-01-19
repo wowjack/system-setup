@@ -5,11 +5,6 @@ import logging
 
 SCRIPT_DIR: Path = Path(__file__).resolve().parent
 LOG_FILE: Path = SCRIPT_DIR / "install.log"
-PACKAGES_DIR: Path = SCRIPT_DIR / "packages"
-CONFIGS_DIR: Path = SCRIPT_DIR / "configs"
-CUSTOMIZE_DIR: Path = SCRIPT_DIR / "customize"
-MEDIA_DIR: Path = SCRIPT_DIR / "media"
-
 
 def setup_logging():
     logger = logging.getLogger()
@@ -33,8 +28,12 @@ setup_logging()
 
 
 
-def run(cmd: str, check=True) -> subprocess.CompletedProcess:
-    cmd = cmd.split()
+def run(cmd: list[str], check=True) -> subprocess.CompletedProcess:
+    """
+    Run a command, capturing all output. \\
+    If check is true, panic if the exit code is not 0. \\
+    Log stdout and stderr as debug to log file.
+    """
     try:
         result = subprocess.run(
             cmd,
@@ -57,21 +56,6 @@ def run(cmd: str, check=True) -> subprocess.CompletedProcess:
 
     return result
 
-
-def read_package_file(file_path: Path) -> list[str]:
-    file_path = Path(file_path)
-    if not file_path.is_file():
-        logging.error(f"{file_path} does not exist.")
-        exit(1)
-    
-    lines = []
-    with file_path.open() as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            lines.append(line)
-    return lines
 
 
 

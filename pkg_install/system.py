@@ -1,3 +1,7 @@
+# I understand that package repositories differ across distros of the same family,
+# but I only anticipate potentially using debian, fedora, or arch
+
+
 import argparse
 from util import PACKAGES_DIR, run, read_package_file
 from pathlib import Path

@@ -1,6 +1,6 @@
 # System Setup Script
 
-Install useful packages and applications to reduce the overhead of setting up a fresh system
+Install useful packages, applications, and customizations to reduce the overhead of setting up a fresh system
 
 
 
@@ -61,7 +61,7 @@ Install useful packages and applications to reduce the overhead of setting up a 
 * ffmpeg
 
 #### Fonts
-* nerd font
+* RobotoMono nerd font
 
 
 ### Security & Networking

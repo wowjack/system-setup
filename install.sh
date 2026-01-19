@@ -29,4 +29,4 @@ case "$PKG_MANAGER" in
 esac
 log INFO "Python successfully installed."
 
-exec python3 "$SCRIPT_DIR/install.py" --pkg-manager "$PKG_MANAGER"
+exec python3 "$SCRIPT_DIR/main.py" --pkg-manager "$PKG_MANAGER"

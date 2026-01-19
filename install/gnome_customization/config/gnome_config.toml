@@ -1,9 +1,4 @@
-["org.gnome.desktop.background"]
-picture-uri = "file://${MEDIA_DIR}/f40-01-night.png"
-picture-uri-dark = "file://${MEDIA_DIR}/f40-01-night.png"
-
-["org.gnome.desktop.screensaver"]
-picture-uri = "file://${MEDIA_DIR}/f40-01-night.png"
+# wallpaper and font are handled elsewhere since they involve downloads and directory specific commands
 
 ["org.gnome.desktop.interface"]
 color-scheme = "prefer-dark"
@@ -11,7 +6,6 @@ clock-show-weekday = true
 clock-show-seconds = false
 enable-hot-corners = true
 show-battery-percentage = true
-monospace-font-name: "RobotoMono Nerd Font 12"
 
 ["org.gnome.desktop.sound"]
 event-sounds = false
@@ -19,13 +13,16 @@ event-sounds = false
 ["org.gnome.nautilus.preferences"]
 show-hidden-files = true
 default-folder-viewer = "list-view"
-sort-directories-first = true
+show-directory-item-counts = "always"
+sort-directories-first = true # Key does not exist on my fedora machine
 
 ["org.gtk.Settings.FileChooser"]
 show-hidden = true
+sort-directories-first = true
 
 ["org.gtk.gtk4.Settings.FileChooser"]
 show-hidden = true
+sort-directories-first = true
 
 ["org.gnome.mutter"]
 center-new-windows = true
