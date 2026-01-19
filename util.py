@@ -28,17 +28,17 @@ setup_logging()
 
 
 
-def run(cmd: list[str], check=True) -> subprocess.CompletedProcess:
+def run(cmd: list[str], exit_on_err=True, stdout_log_level=logging.DEBUG, stderr_log_level=logging.DEBUG) -> subprocess.CompletedProcess:
     """
     Run a command, capturing all output. \\
-    If check is true, panic if the exit code is not 0. \\
-    Log stdout and stderr as debug to log file.
+    If exit_on_err is true, panic if the exit code is not 0. \\
+    Log stdout and stderr.
     """
     try:
         result = subprocess.run(
             cmd,
             text=True,
-            check=check,
+            check=exit_on_err,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
@@ -49,10 +49,10 @@ def run(cmd: list[str], check=True) -> subprocess.CompletedProcess:
         sys.exit(e.returncode)
 
     if result.stderr:
-        logging.debug(result.stderr.strip())
+        logging.log(stderr_log_level, result.stderr.strip())
 
     if result.stdout:
-        logging.debug(result.stdout.strip())
+        logging.log(stdout_log_level, result.stdout.strip())
 
     return result
 

@@ -16,7 +16,7 @@ def install_packages():
     for (num, pkg) in enumerate(PACKAGES):
         logging.info(f"[{num+1}/{total}] Installing {pkg}")
 
-        if run(f"flatpak info --user {pkg}", check=False).returncode == 0:
+        if run(f"flatpak info --user {pkg}", exit_on_err=False).returncode == 0:
             logging.debug(f"{pkg} already installed.")
             continue
 
