@@ -20,4 +20,4 @@ def install():
                 zf.extract(name, FONT_DST)
     run(["fc-cache", "-f"])
 
-    run(["gsettings", "set", "org.gnome.desktop.interface", "monospace-font-name", "RobotoMono Nerd Font 12"])
+    run(["gsettings", "set", "org.gnome.desktop.interface", "monospace-font-name", "RobotoMono Nerd Font Mono 12"])

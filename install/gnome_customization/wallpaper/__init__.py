@@ -8,6 +8,6 @@ WALLPAPER_FILE = Path(__file__).resolve().parent / "wallpaper.png"
 def install():
     logging.info("Installing fancy wallpaper.")
     download_file(WALLPAPER_URL, WALLPAPER_FILE)
-    run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", f"{WALLPAPER_FILE}"])
-    run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", f"{WALLPAPER_FILE}"])
-    run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", f"{WALLPAPER_FILE}"])
+    run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri", f"file://{WALLPAPER_FILE}"])
+    run(["gsettings", "set", "org.gnome.desktop.background", "picture-uri-dark", f"file://{WALLPAPER_FILE}"])
+    run(["gsettings", "set", "org.gnome.desktop.screensaver", "picture-uri", f"file://{WALLPAPER_FILE}"])

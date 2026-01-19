@@ -64,7 +64,10 @@ def download_file(url: str, dst: Path) -> None:
     """
     Download a file from url and save it to dst.
     """
-    logging.debug("Downloading %s -> %s", url, dst)
+    logging.debug(f"Downloading {url} -> {dst}")
+
+    if dst.is_file():
+        logging.debug(f"{dst} already exists.")
 
     dst.parent.mkdir(parents=True, exist_ok=True)
     try:
