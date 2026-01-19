@@ -35,7 +35,7 @@ speed = -0.2
 ["org.gnome.desktop.peripherals.keyboard"]
 repeat = true
 delay = 250
-repeat-interval = 15
+repeat-interval = 20
 
 ["org.gnome.desktop.peripherals.touchpad"]
 tap-to-click = true

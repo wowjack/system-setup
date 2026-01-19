@@ -2,9 +2,10 @@ import subprocess
 import sys
 from pathlib import Path
 import logging
+import urllib.request
+import shutil
 
-SCRIPT_DIR: Path = Path(__file__).resolve().parent
-LOG_FILE: Path = SCRIPT_DIR / "install.log"
+LOG_FILE: Path = Path(__file__).resolve().parent / "install.log"
 
 def setup_logging():
     logger = logging.getLogger()
@@ -34,6 +35,7 @@ def run(cmd: list[str], exit_on_err=True, stdout_log_level=logging.DEBUG, stderr
     If exit_on_err is true, panic if the exit code is not 0. \\
     Log stdout and stderr.
     """
+    logging.debug(f"Running command: {' '.join(cmd)}")
     try:
         result = subprocess.run(
             cmd,
@@ -58,4 +60,18 @@ def run(cmd: list[str], exit_on_err=True, stdout_log_level=logging.DEBUG, stderr
 
 
 
+def download_file(url: str, dst: Path) -> None:
+    """
+    Download a file from url and save it to dst.
+    """
+    logging.debug("Downloading %s -> %s", url, dst)
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with urllib.request.urlopen(url) as response:
+            with open(dst, "wb") as f:
+                shutil.copyfileobj(response, f)
+    except Exception:
+        logging.error("Failed to download %s", url)
+        raise
 

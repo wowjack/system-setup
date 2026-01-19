@@ -1,2 +1,4 @@
 *.log
+*.png
+*.zip
 __pycache__

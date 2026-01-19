@@ -14,9 +14,7 @@ def install():
     for schema, keys in config.items():
         for key, val in keys.items():
             val = format_val(val)
-            logging.debug(f"Setting {schema} {key} to {val}")
-
-            run(["gsettings", "set", schema, key, val], exit_on_err=False, stderr_log_level=logging.WARNING)
+            run(["gsettings", "set", f"{schema}", f"{key}", f"{val}"], exit_on_err=False, stderr_log_level=logging.WARNING)
 
 def format_val(val):
     """Ensure the value read from the toml file has the correct format for gsettings command"""
