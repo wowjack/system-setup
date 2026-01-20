@@ -1,0 +1,1 @@
+PACKAGE_NAME = "org.kde.okular"

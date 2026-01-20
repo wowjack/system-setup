@@ -80,6 +80,23 @@ def download_file(url: str, dst: Path) -> None:
         raise
 
 
+import pkgutil
+import importlib
+
+def get_submodules_attributes(package, attribute):
+    attributes = []
+    for module_info in pkgutil.iter_modules(package.__path__):
+        module_name = f"{package.__name__}.{module_info.name}"
+        module = importlib.import_module(module_name)
+        attr = getattr(module, attribute, None)
+        if attr is not None:
+            attributes.append(attr)
+        else:
+            logging.debug(f"Attribute {attribute} not in {module_name}")
+    return attributes
+            
+    
+
 
 ################################################################
 # Package install logic

@@ -1,19 +1,13 @@
 import logging
 import pkgutil
 import importlib
-from util import install_package
-
+from util import install_package, get_submodules_attributes
+import installers.system_packages as this_package
 
 def install():
     logging.info("Installing system packages.")
-    for module_info in pkgutil.iter_modules(__path__):
-        module = importlib.import_module(f"{__name__}.{module_info.name}")
-        
-        # Install the package using PACKAGE_NAME variable in module
-        package_name = getattr(module, "PACKAGE_NAME", None)
-        install_package(package_name)
-        
-        # Run the customize function in the module if it exists
-        customize_func = getattr(module, "customize", None)
-        if callable(customize_func):
-            customize_func()
+    [install_package(package_name) for package_name in get_submodules_attributes(this_package, "PACKAGE_NAME")]
+
+def customize():
+    logging.info("Customizing system packages.")
+    [customize() for customize in get_submodules_attributes(this_package, "customize")]

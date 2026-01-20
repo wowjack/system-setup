@@ -1,0 +1,1 @@
+PACKAGE_NAME = "com.github.tchx84.Flatseal"

@@ -1,10 +1,5 @@
-PACKAGE_NAME = {
-    "debian": "tmux",
-    "fedora": "tmux",
-    "arch": "tmux"
-}
+PACKAGE_NAME = "tmux"
 
 
-import logging
 def customize():
-    logging.info("Customizing tmux.")
+    pass
