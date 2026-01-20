@@ -4,6 +4,7 @@ from pathlib import Path
 import logging
 import urllib.request
 import shutil
+import argparse
 
 LOG_FILE: Path = Path(__file__).resolve().parent / "install.log"
 
@@ -78,3 +79,41 @@ def download_file(url: str, dst: Path) -> None:
         logging.error("Failed to download %s", url)
         raise
 
+
+
+################################################################
+# Package install logic
+################################################################
+
+distros = ["debian", "fedora", "arch"]
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--distro", choices=distros, required=True)
+DISTRO = parser.parse_args().distro
+DISTRO_PKG_MANAGERS = {
+    "debian": "apt",
+    "fedora": "dnf",
+    "arch": "pacman"
+}
+PKG_MANAGER = DISTRO_PKG_MANAGERS[DISTRO]
+PKG_MANAGER_CMDS = {
+    "apt": (["dpkg", "-s"], ["sudo", "apt-get", "install", "-yq"]),
+    "dnf": (["rpm", "-q"], ["sudo", "dnf", "install", "-yq"]),
+    "pacman": (["pacman", "-Qi"], ["sudo", "pacman", "-S", "--noconfirm"]),
+    "flatpak": (["flatpak", "info", "--user"], ["flatpak", "install", "--user", "--noninteractive", "-y", "flathub"])
+}
+
+
+def install_package(package: str | dict, flatpak=False):
+    if isinstance(package, dict):
+        package = package[DISTRO]
+
+    manager = "flatpak" if flatpak else PKG_MANAGER
+    (check, install) = PKG_MANAGER_CMDS[manager]
+
+    logging.info(f"Installing {manager} {package}")
+    if run(check + [package], exit_on_err=False).returncode == 0:
+        logging.debug(f"{package} already installed")
+        return
+    run(install + [package])
+    logging.debug(f"{package} installed successfully.")

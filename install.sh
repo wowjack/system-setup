@@ -16,10 +16,9 @@ log() {
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     case "$level" in
-        INFO)  echo -e "[INFO] $message" ;;
-        OK)    echo -e "[OK] $message" ;;
-        WARN)  echo -e "[WARN] $message" ;;
-        ERROR) echo -e "[ERROR] $message" ;;
+        INFO)  echo -e "[$timestamp] [INFO] $message" ;;
+        WARN)  echo -e "[$timestamp] [WARN] $message" ;;
+        ERROR) echo -e "[$timestamp] [ERROR] $message" ;;
     esac
     
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
@@ -56,48 +55,54 @@ while true; do
   kill -0 "$$" || exit
 done 2>/dev/null &
 
-log INFO "Detecting system package manager"
-if [[ -f /etc/os-release ]]; then
+
+# Detect linux distribution
+DISTRO_OVERRIDE=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --distro)
+            DISTRO_OVERRIDE="$2"
+            shift 2
+            ;;
+        *)
+            log ERROR "Unknown argument: $1"
+            exit 1
+            ;;
+    esac
+done
+if [[ -n "$DISTRO_OVERRIDE" ]]; then
+    ID="$DISTRO_OVERRIDE"
+    log WARN "Using user defined distro name: $ID"
+    
+elif [[ -f /etc/os-release ]]; then
+    log INFO "Reading distro from /etc/os-release"
     source /etc/os-release
 else
-    log INFO "/etc/os-release does not exist. Distro unknown."
-    ID="unknown"
+    log ERROR "/etc/os-release does not exist. Distro unknown."
+    exit
 fi
-case "$ID" in
-    debian|ubuntu) PKG_MANAGER="apt" ;;
-    fedora) PKG_MANAGER="dnf" ;;
-    arch) PKG_MANAGER="pacman" ;;
-    unknown|*)
-        log INFO "Distro unknown: $ID. Detecting package manager via command exists fallback."
-        if command -v apt &> /dev/null; then
-            PKG_MANAGER="apt"
-        elif command -v dnf &> /dev/null; then
-            PKG_MANAGER="dnf"
-        elif command -v pacman &> /dev/null; then
-            PKG_MANAGER="pacman"
-        else
-            log ERROR "No supported package manager found."
-            return 1
-        fi
-        ;;
-esac
-log INFO "Detected distro: $ID (package manager: $PKG_MANAGER)"
+log INFO "Installing for $ID"
 
-log INFO "Updating system package registry and installing python."
-case "$PKG_MANAGER" in
-    apt)
+log INFO "Updating system package repository metadata."
+case "$ID" in
+    debian)
         sudo apt update
-        sudo apt install -y python3
+        sudo apt install -yq python3
         ;;
-    dnf)
+    fedora)
         sudo dnf -q makecache
         sudo dnf -yq install python3
         ;;
-    pacman)
+    arch)
         sudo pacman -Su --noconfirm
         sudo pacman -Sy --noconfirm python
         ;;
+    unknown|*)
+        log ERROR "Distro not supported: $ID"
+        exit 1
+        ;;
 esac
+
 log INFO "Python successfully installed."
 
-exec python3 "$SCRIPT_DIR/main.py" --pkg-manager "$PKG_MANAGER"
+exec python3 "$SCRIPT_DIR/main.py" --distro "$ID"

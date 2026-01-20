@@ -1,7 +1,6 @@
-from installers import gnome_customization, \
-                    tmux, \
-                    flatpak
+import pkgutil
+import importlib
 
-gnome_customization.install()
-tmux.install()
-flatpak.install()
+for module_info in pkgutil.iter_modules(["installers"]):
+    module = importlib.import_module(f"installers.{module_info.name}")
+    getattr(module, "install", None)()
