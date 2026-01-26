@@ -47,3 +47,6 @@ button-layout = "right:minimize,close"
 
 ["org.gnome.desktop.input-sources"]
 #xkb-options = ["caps:escape"]
+# Modify windows bottom row to resemble mac bottom row
+#   Swap left alt and left super key, replace right alt with super key.
+#xkb-options = ["altwin:swap_lalt_lwin","altwin:ralt_super"]
