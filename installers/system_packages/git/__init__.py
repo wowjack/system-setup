@@ -15,4 +15,4 @@ def customize():
     logging.debug("Installing git config file")
     os.link(CONFIG_FILE, CONFIG_DST)
 
-    run(["ssh-keygen"])
+    #run(["ssh-keygen"])
