@@ -6,5 +6,7 @@ import installers
 
 print("\nFinishing checklist:")
 
-print("Add ssh pub key to github:")
+print("TODO: Add ssh pub key to github:")
 print("\tcat ~/.ssh/id_ed25519.pub")
+
+print("TODO: ")
