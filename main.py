@@ -9,4 +9,6 @@ print("\nFinishing checklist:")
 print("TODO: Add ssh pub key to github:")
 print("\tcat ~/.ssh/id_ed25519.pub")
 
-print("TODO: ")
+print("TODO: clone obsidian_notes and select obsidian_notes/notes as vault.")
+
+print("TODO: download and install protonvpn wireguard connection")
