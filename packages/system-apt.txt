@@ -1,3 +1,0 @@
-docker.io
-texlive-full
-openssh-client

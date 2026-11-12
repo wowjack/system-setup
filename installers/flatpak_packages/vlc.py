@@ -1,1 +1,0 @@
-PACKAGE_NAME = "org.videolan.VLC"

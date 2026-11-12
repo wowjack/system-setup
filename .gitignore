@@ -1,4 +1,7 @@
-*.log
-*.png
-*.zip
-__pycache__
+# nix build / nixos-rebuild build outputs
+result
+result-*
+# direnv / nix-direnv cache
+.direnv/
+# local runs of checks/check_dconf.py
+__pycache__/

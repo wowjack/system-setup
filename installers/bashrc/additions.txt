@@ -1,3 +1,0 @@
-code () {
-  flatpak run com.visualstudio.code $1
-}

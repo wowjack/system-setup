@@ -1,0 +1,4 @@
+# Dotted keys (`services.foo = ...; programs.bar = ...;`) keep each topic's
+# settings together in one place, which matters more in this repository than
+# grouping by top-level attribute.
+disabled = ["repeated_keys"]

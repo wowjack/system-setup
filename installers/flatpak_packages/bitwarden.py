@@ -1,1 +1,0 @@
-PACKAGE_NAME = "com.bitwarden.desktop"
