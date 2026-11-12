@@ -2,6 +2,7 @@
 {
   imports = [
     ./nix.nix
+    ./storage.nix
     ./desktop.nix
     ./virtualisation.nix
     ./gaming.nix

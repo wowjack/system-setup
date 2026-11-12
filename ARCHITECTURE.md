@@ -8,14 +8,18 @@ remain bootable until garbage-collected.
 
 ```
 flake.nix ── inputs (pinned in flake.lock): nixpkgs nixos-26.05, home-manager release-26.05,
- │            nix-index-database (prebuilt package index; all follow the same nixpkgs)
+ │            nix-index-database (prebuilt package index), disko (disk partitioning);
+ │            all follow the same nixpkgs
  │
  ├─ nixosConfigurations.nixos = nixosSystem [
  │     home-manager.nixosModules.home-manager
  │     nix-index-database.nixosModules.nix-index
+ │     disko.nixosModules.disko
  │     hosts/nixos/default.nix ──────── machine: hostname, bootloader, locale, stateVersion
+ │       ├─ disko.nix ───────────────── disk layout: ESP + btrfs subvolumes
  │       └─ modules/nixos/ ──────────── system (root-owned) configuration
  │            ├─ nix.nix               flakes, nh (rebuilds, cleanup), comma, store optimisation, unfree allowlist
+ │            ├─ storage.nix           zram swap, btrfs scrub, snapper snapshots of /home
  │            ├─ desktop.nix           GDM + GNOME + Hyprland, hyprlock PAM, audio, network, bluetooth
  │            ├─ virtualisation.nix    rootless Docker, libvirt, virt-manager
  │            ├─ gaming.nix            Steam
@@ -34,6 +38,7 @@ flake.nix ── inputs (pinned in flake.lock): nixpkgs nixos-26.05, home-manage
  │          └─ hyprland.nix        Hyprland config + session helpers
  │
  ├─ checks.x86_64-linux ── checks/ (run by `nix flake check`; see TESTING.md)
+ ├─ packages.disko ─────── the disko CLI at the pinned version, used when installing
  ├─ formatter ──────────── nixfmt-tree (`nix fmt`)
  └─ devShells.default ──── formatter, linters, Nix language server (`nix develop` / direnv)
 ```
@@ -56,9 +61,59 @@ system could be built against made-up disks.
 ### Host (`hosts/nixos/`)
 
 Settings that belong to this particular machine: hostname, bootloader,
-timezone, locale, `system.stateVersion`, and the generated hardware
-configuration. A second machine would get its own directory here and reuse
+timezone, locale, `system.stateVersion`, the disk layout, and the generated
+hardware configuration (created with `--no-filesystems`, because disko defines
+the filesystems). A second machine would get its own directory here and reuse
 `modules/nixos`.
+
+### Disk layout (`hosts/nixos/disko.nix`, `modules/nixos/storage.nix`)
+
+One GPT disk. A 1 GB EFI system partition holds `/boot` (systemd-boot). The
+rest is one btrfs filesystem split into subvolumes, all mounted with
+`compress=zstd,noatime` except the swap subvolume:
+
+| Subvolume | Mounted at | Holds |
+| --- | --- | --- |
+| `/root` | `/` | the system root: everything not listed below |
+| `/home` | `/home` | user data; `/home/.snapshots` (nested) holds snapper's snapshots |
+| `/nix` | `/nix` | the Nix store |
+| `/persist` | `/persist` | empty, reserved for impermanence |
+| `/log` | `/var/log` | system logs |
+| `/swap` | `/swap` | an 8 GB swapfile |
+
+The same file serves the installer and the running system. At install time the
+disko CLI is given the target disk (`--argstr device …`) and creates the layout.
+The NixOS configuration imports the file to generate `fileSystems` and
+`swapDevices`. Those refer to partitions by GPT label (`disk-main-ESP`,
+`disk-main-root`), so the configuration doesn't record or depend on which disk
+was chosen.
+
+`storage.nix` adds zram swap (compressed RAM, up to half of it, used before the
+swapfile), a monthly `btrfs scrub`, and snapper's timeline for `/home`: hourly
+snapshots kept 24 hours and daily ones kept 7 days.
+
+#### Impermanence later
+
+Impermanence recreates `/` empty on every boot and keeps only declared state.
+What's already in place: `/` is its own subvolume, separate from `/nix`,
+`/home`, `/persist` and `/var/log`, so it can be discarded without touching
+them. The remaining steps:
+
+1. Add the [impermanence](https://github.com/nix-community/impermanence)
+   flake input and module.
+2. Add an initrd step that, on every boot, moves the `/root` subvolume aside
+   (keeping recent ones for a while) and creates a fresh empty one. The btrfs
+   filesystem is `/dev/disk/by-partlabel/disk-main-root`.
+3. Mark `/persist` and `/var/log` `neededForBoot = true`.
+4. Declare the state to keep under `/persist`. Typical candidates are
+   `/etc/machine-id`, `/var/lib/nixos` (user/group IDs), `/var/lib/systemd`,
+   `/etc/NetworkManager/system-connections`, `/var/lib/bluetooth` and
+   `/var/lib/libvirt`.
+5. Passwords: with `users.mutableUsers`, they live in `/etc/shadow`, which would
+   be wiped. Use `hashedPasswordFile` pointing into `/persist` instead.
+
+Before switching, list what currently lives on `/` (for example with
+`btrfs subvolume find-new`) to check nothing needed is missed.
 
 ### System modules (`modules/nixos/`)
 

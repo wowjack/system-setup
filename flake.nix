@@ -12,6 +12,11 @@
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Declarative disk partitioning (hosts/nixos/disko.nix). `latest` follows releases.
+    disko = {
+      url = "github:nix-community/disko/latest";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -20,6 +25,7 @@
       nixpkgs,
       home-manager,
       nix-index-database,
+      disko,
     }:
     let
       system = "x86_64-linux";
@@ -31,6 +37,7 @@
           modules = [
             home-manager.nixosModules.home-manager
             nix-index-database.nixosModules.nix-index
+            disko.nixosModules.disko
             ./hosts/nixos
             hardwareModule
           ];
@@ -38,7 +45,7 @@
 
       # Generated on the target machine by nixos-generate-config (see README.md).
       # Until it exists (and is `git add`ed — flakes ignore untracked files) there is
-      # deliberately no `nixos` configuration, so a system with made-up disks can't be built.
+      # deliberately no `nixos` configuration, so a system with made-up hardware can't be built.
       hardwareConfig = ./hosts/nixos/hardware-configuration.nix;
     in
     {
@@ -49,8 +56,12 @@
       checks.${system} = import ./checks {
         inherit pkgs self;
         hmLib = home-manager.lib.hm;
+        diskoLib = disko.lib;
         nixos = mkNixos ./checks/stub-hardware.nix;
       };
+
+      # The disko CLI at the version pinned in flake.lock, for installing (see README.md).
+      packages.${system}.disko = disko.packages.${system}.disko;
 
       formatter.${system} = pkgs.nixfmt-tree;
 

@@ -33,6 +33,17 @@ module enables Avahi so the machine and others on the LAN (printers,
 Chromecasts, file shares) can be discovered. To turn it off, set
 `services.avahi.enable = false;` in `modules/nixos/desktop.nix`.
 
+## Disk
+
+- **No encryption.** The disk is not encrypted (a deliberate choice), so
+  anyone with physical access to the disk or machine can read all data on it,
+  including `/home` and saved Wi-Fi/VPN credentials.
+- **Snapshots keep deleted files.** snapper snapshots `/home` hourly and daily,
+  so a deleted or overwritten file stays readable in `/home/.snapshots` for up
+  to 7 days. To remove something sensitive for good, also delete the snapshots
+  that contain it (`snapper -c home delete <number>`). `user` may manage
+  these snapshots without sudo (`ALLOW_USERS`).
+
 ## Proprietary software and loss of Flatpak sandboxing
 
 `modules/nixos/nix.nix` lists every unfree package explicitly. A new

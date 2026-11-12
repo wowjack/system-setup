@@ -3,6 +3,7 @@
   pkgs,
   self,
   hmLib,
+  diskoLib,
   # The full system, evaluated against ./stub-hardware.nix.
   nixos,
 }:
@@ -13,9 +14,17 @@ in
   # Evaluate the whole system (every module, assertion and package derivation)
   # without building it. Catches option typos, type errors, and disallowed unfree
   # packages before the real hardware-configuration.nix exists.
-  nixos-eval = builtins.seq nixos.config.system.build.toplevel.drvPath (
-    pkgs.runCommand "nixos-eval" { } "touch $out"
-  );
+  # Also instantiates disko's install-time partitioning script for hosts/nixos/disko.nix.
+  nixos-eval =
+    let
+      inherit (nixos.config.system.build) toplevel diskoScript;
+    in
+    builtins.deepSeq [ toplevel.drvPath diskoScript.drvPath ] (
+      pkgs.runCommand "nixos-eval" { } "touch $out"
+    );
+
+  # The disk layout formats, mounts and boots (VM test; needs KVM).
+  disko-layout = import ./disko-layout.nix { inherit pkgs diskoLib; };
 
   # Every dconf key exists and has the type its GSettings schema expects.
   dconf = import ./dconf.nix {

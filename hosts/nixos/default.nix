@@ -1,7 +1,13 @@
-# Settings specific to this machine. Hardware (disks, kernel modules, CPU microcode)
-# lives in ./hardware-configuration.nix, generated on the machine itself.
+# Settings specific to this machine. The disk layout is in ./disko.nix; other
+# hardware (kernel modules, CPU microcode) is in ./hardware-configuration.nix,
+# generated on the machine itself.
 {
-  imports = [ ../../modules/nixos ];
+  imports = [
+    ../../modules/nixos
+    # The disk is only chosen (and erased) when installing; afterwards filesystems
+    # are found by partition label, so this device path is never used.
+    (import ./disko.nix { device = "/dev/disk/by-id/chosen-at-install"; })
+  ];
 
   networking.hostName = "nixos";
 

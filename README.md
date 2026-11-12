@@ -16,6 +16,7 @@ The `nh os` commands work from any directory & use this repository at
 | Run a program without installing it                         | `, <command>`                                                                                     |
 | Find which package has a command or file                    | type the command, or `nix-locate bin/<command>`                                                   |
 | Find a package or option                                    | `nh search <name>`, or <https://search.nixos.org> and <https://home-manager-options.extranix.com> |
+| Restore a file from a /home snapshot                        | `snapper -c home list`, then copy it out of `/home/.snapshots/<number>/snapshot/`                  |
 | Free disk space now                                         | `nh clean all --keep-since 14d --keep 5 --keep-one` (also runs weekly)                            |
 | Run all checks                                              | `nix flake check`                                                                                 |
 | Format the Nix files                                        | `nix fmt`                                                                                         |
@@ -28,42 +29,67 @@ new files before rebuilding.
 
 ## Installing on a new machine
 
-1. Install NixOS 26.05 from the graphical ISO. Create the user `user`. The
-   desktop you pick in the installer doesn't matter; this configuration
-   replaces it.
-2. In a terminal on the new system, get this repository:
+The disk layout (btrfs subvolumes, swapfile) is created by
+[disko](https://github.com/nix-community/disko) from `hosts/nixos/disko.nix`,
+so install from a terminal in the live session instead of the graphical
+installer. **This erases the chosen disk.** Back up anything on it first.
+
+1. Boot the NixOS 26.05 graphical ISO, connect to the network, and open a
+   terminal. Don't start the graphical installer.
+2. Get this repository:
 
    ```sh
    nix-shell -p git gh   # gh only if the repository is private: run `gh auth login`
-   git clone https://github.com/wowjack/system-setup.git ~/repos/system-setup
-   cd ~/repos/system-setup
+   git clone https://github.com/wowjack/system-setup.git
+   cd system-setup
    ```
 
-3. Add the hardware configuration the installer generated for this machine
-   (disks, kernel modules, CPU microcode). Until this file exists, the flake
-   deliberately has no `nixos` configuration.
+3. Find the disk to install on. Use its stable name from `/dev/disk/by-id/`
+   (e.g. `nvme-Samsung_SSD_990_EVO_Plus_1TB_…`, not one ending in `-partN`):
 
    ```sh
-   cp /etc/nixos/hardware-configuration.nix hosts/nixos/
+   lsblk -o NAME,SIZE,MODEL
+   ls -l /dev/disk/by-id/
+   ```
+
+4. Partition, format and mount it at `/mnt`. disko asks for confirmation
+   before erasing.
+
+   ```sh
+   nix --extra-experimental-features "nix-command flakes" build .#disko
+   sudo ./result/bin/disko --mode destroy,format,mount \
+     --argstr device /dev/disk/by-id/<disk> hosts/nixos/disko.nix
+   rm result
+   ```
+
+5. Generate the hardware configuration for this machine (kernel modules, CPU
+   microcode). `--no-filesystems` because disko already describes them. Until
+   this file exists and is tracked by git, the flake deliberately has no
+   `nixos` configuration.
+
+   ```sh
+   sudo nixos-generate-config --no-filesystems --root /mnt --show-hardware-config \
+     > hosts/nixos/hardware-configuration.nix
    git add hosts/nixos/hardware-configuration.nix
    ```
 
-   If you enabled disk encryption in the installer, also copy any
-   `boot.initrd.luks.devices` and `boot.initrd.secrets` lines from
-   `/etc/nixos/configuration.nix` into `hosts/nixos/default.nix`. Otherwise
-   the system will not be able to unlock its disk at boot.
-
-4. Build the configuration and make it the boot default:
+6. Copy the repository into the new system and install it. Root gets no
+   password; you use `sudo` as `user`.
 
    ```sh
-   nixos-rebuild boot --flake .#nixos --sudo
+   sudo mkdir -p /mnt/home/user/repos
+   sudo cp -r . /mnt/home/user/repos/system-setup
+   sudo nixos-install --flake /mnt/home/user/repos/system-setup#nixos --no-root-passwd
    ```
 
-   (nh isn't installed until this configuration is applied, so the first
-   build uses `nixos-rebuild` directly.)
+7. Set `user`'s password and give it its home directory:
 
-5. Reboot, then commit `hosts/nixos/hardware-configuration.nix`. It contains
-   disk UUIDs, not secrets.
+   ```sh
+   sudo nixos-enter --root /mnt -c 'passwd user && chown -R user:users /home/user'
+   ```
+
+8. Reboot into the new system and commit `hosts/nixos/hardware-configuration.nix`
+   (it contains no secrets).
 
 ### Finishing checklist
 
@@ -108,6 +134,7 @@ direnv allow   # trust this .envrc; repeat after you edit it
 | Area           | Where                              | Contents                                                                                                                                              |
 | -------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Nix tooling    | `modules/nixos/nix.nix`            | nh, comma, nix-index (command-not-found, `nix-locate`)                                                                                                |
+| Storage        | `hosts/nixos/disko.nix`, `modules/nixos/storage.nix` | btrfs subvolumes (zstd compression, noatime), zram + 8 GB swapfile, monthly scrub, hourly/daily snapper snapshots of /home |
 | Desktop        | `modules/nixos/desktop.nix`        | GDM, GNOME, Hyprland, NetworkManager, Bluetooth, PipeWire                                                                                             |
 | Gaming         | `modules/nixos/gaming.nix`         | Steam                                                                                                                                                 |
 | Virtualisation | `modules/nixos/virtualisation.nix` | rootless Docker, libvirt/QEMU/KVM, virt-manager                                                                                                       |
@@ -142,6 +169,12 @@ The top bar's network, Bluetooth and volume items open the matching GNOME
 Settings panel. The screen locks after 5 minutes idle and turns off 30 seconds
 later. Customise it all in `home/desktop/hyprland.nix`; Hyprland's Lua API is
 documented at <https://wiki.hypr.land/>.
+
+## Impermanence (planned)
+
+The disk layout is already prepared for wiping `/` on every boot. See
+"Impermanence later" in [ARCHITECTURE.md](ARCHITECTURE.md) for what's in
+place and the remaining steps.
 
 ## Utilities
 

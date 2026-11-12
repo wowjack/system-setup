@@ -10,16 +10,20 @@ nix fmt              # format the Nix files (fixes what the lint check reports)
 ```
 
 New files must be `git add`ed first: flakes ignore untracked files.
+`checks.disko-layout` boots a VM, so it needs KVM (`/dev/kvm`). NixOS enables
+that automatically on machines with hardware virtualisation.
 
 On a machine without Nix (e.g. the old Debian install), run the checks in a
 throwaway container. The repository is mounted read-only and copied, so its git
-index is not touched:
+index is not touched. `--device /dev/kvm` and the `system-features` option let
+the VM test run:
 
 ```sh
-docker run --rm -v "$PWD":/src:ro nixos/nix:2.35.4 sh -c '
+docker run --rm --device /dev/kvm -v "$PWD":/src:ro nixos/nix:2.35.4 sh -c '
   cp -r /src /work && cd /work &&
   git config --global --add safe.directory /work && git add -A &&
-  nix --extra-experimental-features "nix-command flakes" --option sandbox false flake check -L'
+  nix --extra-experimental-features "nix-command flakes" --option sandbox false \
+    --option system-features "kvm nixos-test big-parallel benchmark" flake check -L'
 ```
 
 ## What the checks cover
@@ -27,14 +31,17 @@ docker run --rm -v "$PWD":/src:ro nixos/nix:2.35.4 sh -c '
 | Check | What it verifies |
 | --- | --- |
 | `nixosConfigurations.*` | `nix flake check` evaluates every defined system. `nixos` only exists once the machine's hardware file is committed (see README). |
-| `checks.nixos-eval` | Evaluates the complete system (all NixOS and Home Manager modules, assertions, and every package's derivation) against `checks/stub-hardware.nix`, without building it. Catches option typos, type errors, removed or renamed options, and unfree packages missing from the allowlist. Works before the real hardware file exists. |
+| `checks.nixos-eval` | Evaluates the complete system (all NixOS and Home Manager modules, assertions, and every package's derivation) against `checks/stub-hardware.nix`, without building it. Catches option typos, type errors, removed or renamed options, and unfree packages missing from the allowlist. Also instantiates disko's partitioning script for `hosts/nixos/disko.nix`. Works before the real hardware file exists. |
+| `checks.disko-layout` | VM test using disko's harness. Formats a virtual disk with `hosts/nixos/disko.nix` (and destroys and recreates it), boots a minimal system from it, then checks that every subvolume is mounted where expected with `compress=zstd,noatime`, that `/home/.snapshots` is a subvolume, and that the swapfile is active. The virtual disk is 4 GB, so the test shrinks the swapfile to 1 GB; everything else is the real layout. The test script stops the booted VM itself, because disko's harness doesn't register it with the current nixpkgs test driver and the build would otherwise hang after passing. |
 | `checks.dconf` | `checks/check_dconf.py` loads the GSettings schemas shipped by gsettings-desktop-schemas, GTK 3/4, Mutter and Nautilus. It then confirms every key in `home/desktop/gnome.nix` exists, parses to exactly the type the schema expects (e.g. `uint32` vs `int32`), and is within the allowed range or choices. dconf would otherwise ignore such mistakes silently. |
 | `checks.hyprland-config` | Runs `Hyprland --verify-config` on the generated `hyprland.lua`. Catches Lua syntax errors, unknown config keys and invalid dispatcher arguments. |
 | `checks.lint` | `nixfmt --check`, `statix` (anti-patterns; `statix.toml` disables only the repeated-keys rule), `deadnix` (unused code), and `ruff check` + `ruff format --check` on the Python check script. |
 
 Each check has been shown to fail on a deliberately broken input. These were
 a uint32 key given as int32, an invalid enum value, a nonexistent key, an
-invalid Hyprland dispatcher argument, and a Lua syntax error.
+invalid Hyprland dispatcher argument, and a Lua syntax error. The disk
+layout test caught a real failure on its first run: an 8 GB swapfile that
+didn't fit the test disk, which is why the test shrinks it.
 
 ## What is not covered
 
@@ -45,7 +52,8 @@ invalid Hyprland dispatcher argument, and a Lua syntax error.
   Try changes with `nh os test`: it activates the new configuration without
   creating a boot entry, so a reboot undoes it.
 - **Hardware.** `hardware-configuration.nix` is machine-generated and only
-  evaluated once it exists.
+  evaluated once it exists. The disk layout test boots a minimal system, not
+  this configuration, on a virtual disk.
 
 ## Adding a check
 
