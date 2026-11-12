@@ -4,6 +4,8 @@
   self,
   hmLib,
   diskoLib,
+  sopsModule,
+  homeManagerModule,
   # The full system, evaluated against ./stub-hardware.nix.
   nixos,
 }:
@@ -25,6 +27,13 @@ in
 
   # The disk layout formats, mounts and boots (VM test; needs KVM).
   disko-layout = import ./disko-layout.nix { inherit pkgs diskoLib; };
+
+  # Secrets are decrypted and installed: login password, SSH keys, WireGuard
+  # profiles (VM test; needs KVM).
+  secrets = import ./secrets.nix { inherit pkgs sopsModule homeManagerModule; };
+
+  # The WireGuard profile converter (modules/nixos/wireguard/nm_profile.py).
+  wireguard-profile = import ./wireguard-profile.nix { inherit pkgs; };
 
   # Every dconf key exists and has the type its GSettings schema expects.
   dconf = import ./dconf.nix {
@@ -61,8 +70,8 @@ in
         find . -name '*.nix' -print0 | xargs -0 nixfmt --check
         statix check .
         deadnix --fail .
-        ruff check --no-cache checks
-        ruff format --check --no-cache checks
+        ruff check --no-cache .
+        ruff format --check --no-cache .
         touch $out
       '';
 }

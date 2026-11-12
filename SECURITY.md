@@ -2,26 +2,48 @@
 
 Security-relevant parts of this configuration and their risks.
 
-## Secrets never go in this repository
+## Secrets
 
 Everything Nix evaluates ends up in `/nix/store`, which every user on the
-machine can read. That includes file contents, settings and strings. Keep
-secrets as ordinary mutable state outside this repository:
+machine can read. Secrets therefore never appear as plain Nix values. They are
+stored sops-encrypted in `secrets/` (age encryption, one master key) and
+decrypted on the machine by sops-nix (README.md, "Secrets").
 
-- SSH keys stay in `~/.ssh` (created with `ssh-keygen`).
-- WireGuard/VPN profiles imported through NetworkManager are stored root-only in
-  `/etc/NetworkManager/system-connections`.
-- User passwords are set with `passwd`. `users.mutableUsers` stays at its
-  default, so no password hashes are in the config.
-
-If secrets ever need to be declarative, use an encryption tool built for it
-(sops-nix or agenix) rather than plain Nix values.
+- **The master key opens everything.** Every secret, on every machine, is
+  encrypted to the one age key in Bitwarden. Whoever has it can read all of
+  them, including the copies in the public git history forever. Replacing the
+  key (README.md) protects future versions only; after a leak, the secrets
+  themselves have to be changed.
+- **Where the key is on disk.** `/persist/sops/age/keys.txt`, root-only. The
+  disk is not encrypted (see [Disk](#disk)), so physical access to any one
+  machine gives the key, and with it the secrets of all machines.
+- **Losing the key locks you out.** The login password is one of the secrets:
+  without the key it can't be decrypted, NixOS locks the account, and nobody
+  can log in. Keep the Bitwarden note safe.
+- **What is public.** The encrypted files reveal the secrets' names (keys in
+  `secrets.yaml`, VPN profile file names), their approximate sizes, when they
+  changed, and the master public key. Values are encrypted.
+- **Decrypted copies.** sops-nix writes secrets to `/run/secrets`, which is
+  `ramfs`: never written to disk, not even to swap. Owners: the password hash
+  root-only, the SSH keys `user` (private key mode 0400). WireGuard profiles
+  are converted into NetworkManager profiles in
+  `/run/NetworkManager/system-connections` (root-only, mode 0600). That is a
+  `tmpfs`, which the kernel may move to swap, and the swapfile is on the
+  unencrypted disk. (A profile imported the usual way would be stored on disk
+  in `/etc`.)
+- **The SSH private key has no passphrase.** Any program running as `user`
+  can read and use it, as before.
+- **Editing.** sops writes a temporary plaintext copy while editing; the
+  documented commands put it in `/dev/shm` (RAM). The one-time setup put the
+  master key in `/dev/shm` too, never on disk.
+- **Users are fixed by the configuration** (`users.mutableUsers = false`).
+  `passwd` changes are overwritten on the next switch; root has no password.
 
 ## Privileged access
 
 | Grant | Where | Risk |
 | --- | --- | --- |
-| `wheel` group | `modules/nixos/users.nix` | Full root via sudo (with password). |
+| `wheel` group | `modules/nixos/users.nix` | Full root via sudo (with password), and with it the master key. |
 | `libvirtd` group | `modules/nixos/users.nix` | Manages system VMs without a password, including passing host devices and storage to them. Close to root-equivalent. |
 | `networkmanager` group | `modules/nixos/users.nix` | Changes network connections without a password. |
 | Rootless Docker | `modules/nixos/virtualisation.nix` | Containers run with your user's privileges. Deliberately *not* the `docker` group, which is root-equivalent. |
@@ -62,6 +84,8 @@ run.
   changes until `nix flake update` is run and the lock file is committed.
 - The wallpaper is downloaded from a commit-pinned GitHub URL and checked
   against a fixed hash (`home/desktop/shared.nix`).
+- sops-nix is pinned by `flake.lock` like the other inputs. It runs as root
+  at boot and on every switch, with access to the master key.
 - The nix-index database (for comma and command-not-found) is a prebuilt file
   from nix-community/nix-index-database's GitHub releases. Its URL and hash are
   pinned by `flake.lock`. It only maps commands to package names; the programs

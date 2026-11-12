@@ -17,6 +17,11 @@
       url = "github:nix-community/disko/latest";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Decrypts the sops-encrypted files in secrets/ on the machine (modules/nixos/secrets.nix).
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -26,6 +31,7 @@
       home-manager,
       nix-index-database,
       disko,
+      sops-nix,
     }:
     let
       system = "x86_64-linux";
@@ -38,6 +44,7 @@
             home-manager.nixosModules.home-manager
             nix-index-database.nixosModules.nix-index
             disko.nixosModules.disko
+            sops-nix.nixosModules.sops
             ./hosts/nixos
             hardwareModule
           ];
@@ -57,6 +64,8 @@
         inherit pkgs self;
         hmLib = home-manager.lib.hm;
         diskoLib = disko.lib;
+        sopsModule = sops-nix.nixosModules.sops;
+        homeManagerModule = home-manager.nixosModules.home-manager;
         nixos = mkNixos ./checks/stub-hardware.nix;
       };
 
@@ -73,6 +82,10 @@
           deadnix
           nil
           ruff
+          # Encrypting and editing secrets/ (README.md, "Secrets").
+          sops
+          age
+          mkpasswd
         ];
       };
     };

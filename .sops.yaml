@@ -1,0 +1,5 @@
+# sops settings: files under secrets/ are encrypted to this age public key.
+# Its private half (the master key) is in the password manager; see README.md.
+creation_rules:
+  - path_regex: (^|/)secrets/
+    age: age1vus42sevmlj44my9yckuyujygv5v0n0px75zuuyqr4zhdmyl5deszj2q2n

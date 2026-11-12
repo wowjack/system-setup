@@ -1,8 +1,15 @@
 # User accounts, and Home Manager for each of them.
+{ config, ... }:
 {
+  # Accounts and passwords come only from this configuration: `passwd` changes
+  # are overwritten on the next switch. To change the password, change its hash
+  # in secrets/secrets.yaml (see README.md, "Secrets").
+  users.mutableUsers = false;
+
   users.users.user = {
     isNormalUser = true;
     description = "Jack Kingham";
+    hashedPasswordFile = config.sops.secrets.user_password_hash.path;
     extraGroups = [
       "wheel" # sudo
       "networkmanager" # manage network connections without a password prompt
