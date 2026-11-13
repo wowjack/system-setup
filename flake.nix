@@ -22,6 +22,11 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Claude code
+    claude-code = {
+      url = "github:sadjow/claude-code-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -32,6 +37,7 @@
       nix-index-database,
       disko,
       sops-nix,
+      claude-code
     }:
     let
       system = "x86_64-linux";
@@ -45,6 +51,7 @@
             nix-index-database.nixosModules.nix-index
             disko.nixosModules.disko
             sops-nix.nixosModules.sops
+            { nixpkgs.overlays = [claude-code.overlays.default ]; }
             ./hosts/nixos
             hardwareModule
           ];
