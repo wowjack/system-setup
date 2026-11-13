@@ -311,3 +311,9 @@ Standalone helper scripts that aren't part of the system configuration live in
   launcher as if Super had been tapped (Super+<key> doesn't). It happened in 1
   of 3 runs of a VM test that pressed real keys; the cause wasn't found, and
   the Hyprland session is unfinished for now.
+- VS Code is held at 1.119.0 (`home/packages.nix`). The pinned nixpkgs has
+  1.144.0, which fails to build
+  ([nixpkgs#584492](https://github.com/NixOS/nixpkgs/issues/584492)); upstream
+  has reverted it, but the revert hasn't reached the `nixos-26.05` channel yet.
+  Once `nix flake update` brings it in, the build stops with a reminder to
+  delete the workaround.

@@ -76,6 +76,9 @@ apps bound to it, so that is not a usable "only some apps" mode.
 
 - **Building the full system.** `nixos-eval` instantiates every derivation but
   doesn't build or download them. `nh os build` does that on the real machine.
+  Packages missing from the binary cache, such as the proprietary ones, are
+  built locally at that point, so a broken one only shows up then (VS Code
+  1.144.0 did; see README.md, "Problems").
 - **Runtime behaviour.** Booting, GDM sessions, Hyprland keybindings (e.g.
   tapping Super; see README.md, "Problems"), the waybar layout and the
   idle/lock timing are not exercised.
