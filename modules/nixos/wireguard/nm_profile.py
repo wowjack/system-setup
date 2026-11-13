@@ -5,7 +5,8 @@ Usage: nm_profile.py <name>.conf <output.nmconnection>
 The conversion is done by NetworkManager's own importer (the same one
 `nmcli connection import type wireguard` uses), so the profile behaves exactly
 like an imported one. On top of that, the profile never connects on its own,
-and its UUID is derived from <name> so it stays the same across rebuilds.
+its UUID is derived from <name> so it stays the same across rebuilds, and
+while it is connected its DNS servers are the only ones used.
 """
 
 import os
@@ -20,6 +21,12 @@ from gi.repository import NM  # noqa: E402
 # Fixed namespace for the profile UUIDs (uuid5 of a name in it).
 UUID_NAMESPACE = uuid.UUID("2f4c1d36-5b0e-4f53-9a7e-3d8c6a1b9e20")
 
+# NetworkManager otherwise keeps other connections' DNS servers (e.g. the
+# router's) as fallbacks, and lookups that fall back to them bypass the tunnel.
+# A negative priority makes it use only the servers of the connections with the
+# lowest priority, i.e. this profile's.
+DNS_PRIORITY = -50
+
 
 def convert(conf_path: str) -> bytes:
     # The importer requires the file name to be "<interface name>.conf" and uses
@@ -30,6 +37,14 @@ def convert(conf_path: str) -> bytes:
     settings.set_property(NM.SETTING_CONNECTION_AUTOCONNECT, False)
     profile_uuid = uuid.uuid5(UUID_NAMESPACE, name)
     settings.set_property(NM.SETTING_CONNECTION_UUID, str(profile_uuid))
+    for ip_settings in (
+        connection.get_setting_ip4_config(),
+        connection.get_setting_ip6_config(),
+    ):
+        # Only where the profile has DNS servers: without any, a negative
+        # priority would leave no DNS servers at all while connected.
+        if ip_settings is not None and ip_settings.get_num_dns() > 0:
+            ip_settings.set_property(NM.SETTING_IP_CONFIG_DNS_PRIORITY, DNS_PRIORITY)
     connection.normalize()
     keyfile = NM.keyfile_write(connection, NM.KeyfileHandlerFlags.NONE, None)
     data, _length = keyfile.to_data()

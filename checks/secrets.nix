@@ -92,6 +92,8 @@ pkgs.testers.runNixOSTest {
 
       sops.defaultSopsFile = lib.mkForce "${testSecrets}/secrets.yaml";
       local.wireguardProfiles = lib.mkForce { wgtest = "${testSecrets}/wireguard/wgtest.conf"; };
+      # The same system after the last profile is removed (`git rm`), to switch to.
+      specialisation.no-profiles.configuration.local.wireguardProfiles = lib.mkOverride 10 { };
 
       virtualisation.fileSystems."/persist" = {
         device = "tmpfs";
@@ -106,42 +108,65 @@ pkgs.testers.runNixOSTest {
       };
     };
 
-  testScript = ''
-    machine.wait_for_unit("multi-user.target")
+  testScript =
+    { nodes, ... }:
+    ''
+      machine.wait_for_unit("multi-user.target")
 
-    with subtest("login password comes from the encrypted file"):
-        machine.succeed('test "$(getent shadow user | cut -d: -f2)" = "$(cat ${testSecrets}/password-hash)"')
+      with subtest("login password comes from the encrypted file"):
+          machine.succeed('test "$(getent shadow user | cut -d: -f2)" = "$(cat ${testSecrets}/password-hash)"')
 
-    with subtest("SSH key pair is linked into ~/.ssh, private key readable only by user"):
-        machine.wait_for_unit("home-manager-user.service")
-        machine.succeed("cmp /home/user/.ssh/id_ed25519 ${testSecrets}/id_ed25519")
-        machine.succeed("cmp /home/user/.ssh/id_ed25519.pub ${testSecrets}/id_ed25519.pub")
-        machine.succeed('test "$(stat -L -c "%U %a" /home/user/.ssh/id_ed25519)" = "user 400"')
-        # ssh refuses keys with loose permissions; this loads it the same way.
-        machine.succeed("su user -c 'ssh-keygen -y -f ~/.ssh/id_ed25519'")
+      with subtest("SSH key pair is linked into ~/.ssh, private key readable only by user"):
+          machine.wait_for_unit("home-manager-user.service")
+          machine.succeed("cmp /home/user/.ssh/id_ed25519 ${testSecrets}/id_ed25519")
+          machine.succeed("cmp /home/user/.ssh/id_ed25519.pub ${testSecrets}/id_ed25519.pub")
+          machine.succeed('test "$(stat -L -c "%U %a" /home/user/.ssh/id_ed25519)" = "user 400"')
+          # ssh refuses keys with loose permissions; this loads it the same way.
+          machine.succeed("su user -c 'ssh-keygen -y -f ~/.ssh/id_ed25519'")
 
-    with subtest("WireGuard profile is loaded, private to root, and not connected"):
-        machine.wait_for_unit("wireguard-profiles.service")
-        machine.succeed('test "$(stat -c %a /run/NetworkManager/system-connections/sops-wireguard-wgtest.nmconnection)" = 600')
-        machine.succeed('test "$(nmcli -g connection.autoconnect connection show wgtest)" = no')
-        machine.succeed('test -z "$(nmcli -g GENERAL.STATE connection show wgtest)"')
+      with subtest("WireGuard profile is loaded, private to root, and not connected"):
+          machine.wait_for_unit("wireguard-profiles.service")
+          machine.succeed('test "$(stat -c %a /run/NetworkManager/system-connections/sops-wireguard-wgtest.nmconnection)" = 600')
+          machine.succeed('test "$(nmcli -g connection.autoconnect connection show wgtest)" = no')
+          machine.succeed('test -z "$(nmcli -g GENERAL.STATE connection show wgtest)"')
 
-    with subtest("user can turn the profile on and off; while on, all traffic goes through it"):
-        server.wait_for_unit("wireguard-wg0.service")
-        server.succeed("wg set wg0 peer $(cat ${testSecrets}/client-pub) allowed-ips 10.2.0.2/32")
-        machine.succeed("su user -c 'nmcli connection up wgtest'")
-        # Through the tunnel and past the firewall. Retried: the first packets
-        # start the WireGuard handshake, which is slow without KVM.
-        machine.wait_until_succeeds("ping -c1 -W2 10.2.0.1", timeout=60)
-        machine.succeed("ip route get 198.51.100.1 | grep -q 'dev wgtest'")
-        machine.succeed("su user -c 'nmcli connection down wgtest'")
-        machine.fail("ip route get 198.51.100.1 | grep -q 'dev wgtest'")
+      with subtest("user can turn the profile on and off; while on, all traffic goes through it"):
+          server.wait_for_unit("wireguard-wg0.service")
+          server.succeed("wg set wg0 peer $(cat ${testSecrets}/client-pub) allowed-ips 10.2.0.2/32")
+          machine.succeed("su user -c 'nmcli connection up wgtest'")
+          # Through the tunnel and past the firewall. Retried: the first packets
+          # start the WireGuard handshake, which is slow without KVM.
+          machine.wait_until_succeeds("ping -c1 -W2 10.2.0.1", timeout=60)
+          machine.succeed("ip route get 198.51.100.1 | grep -q 'dev wgtest'")
+          machine.succeed("su user -c 'nmcli connection down wgtest'")
+          machine.fail("ip route get 198.51.100.1 | grep -q 'dev wgtest'")
 
-    with subtest("changes made with nmcli --temporary are discarded when the profiles reload"):
-        machine.succeed("su user -c 'nmcli connection modify --temporary wgtest ipv4.never-default yes'")
-        machine.succeed('test "$(nmcli -g ipv4.never-default connection show wgtest)" = yes')
-        machine.succeed('test -z "$(ls -A /etc/NetworkManager/system-connections)"')
-        machine.succeed("systemctl restart wireguard-profiles.service")
-        machine.succeed('test "$(nmcli -g ipv4.never-default connection show wgtest)" = no')
-  '';
+      with subtest("while connected, DNS goes only to the VPN's server"):
+          # A LAN connection with its own DNS server, like a home router's. Kept in
+          # memory (`save no`): /etc/NetworkManager must stay empty (next subtest).
+          machine.succeed(
+              "nmcli connection add save no type ethernet con-name lan ifname eth1"
+              " ipv4.method manual ipv4.addresses ${nodes.machine.networking.primaryIPAddress}/24"
+              " ipv4.gateway 192.168.1.2 ipv4.dns 192.168.1.53 ipv6.method disabled"
+          )
+          machine.succeed("nmcli connection up lan")
+          machine.wait_until_succeeds("grep -qx 'nameserver 192.168.1.53' /etc/resolv.conf")
+          machine.succeed("su user -c 'nmcli connection up wgtest'")
+          machine.wait_until_succeeds("grep -qx 'nameserver 10.2.0.1' /etc/resolv.conf")
+          machine.fail("grep -q 192.168.1.53 /etc/resolv.conf")
+          machine.succeed("su user -c 'nmcli connection down wgtest'")
+          machine.wait_until_succeeds("grep -qx 'nameserver 192.168.1.53' /etc/resolv.conf")
+
+      with subtest("changes made with nmcli --temporary are discarded when the profiles reload"):
+          machine.succeed("su user -c 'nmcli connection modify --temporary wgtest ipv4.never-default yes'")
+          machine.succeed('test "$(nmcli -g ipv4.never-default connection show wgtest)" = yes')
+          machine.succeed('test -z "$(ls -A /etc/NetworkManager/system-connections)"')
+          machine.succeed("systemctl restart wireguard-profiles.service")
+          machine.succeed('test "$(nmcli -g ipv4.never-default connection show wgtest)" = no')
+
+      with subtest("a removed profile is unloaded on the next switch"):
+          machine.succeed("/run/current-system/specialisation/no-profiles/bin/switch-to-configuration test")
+          machine.fail("nmcli connection show wgtest")
+          machine.fail("ls /run/NetworkManager/system-connections/sops-wireguard-*")
+    '';
 }

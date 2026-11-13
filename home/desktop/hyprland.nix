@@ -183,7 +183,12 @@ in
       local playerctl   = ${toLua playerctl}
 
       -- Apps and session
-      hl.bind("Super_L", hl.dsp.exec_cmd(launcher), { release = true }) -- tap Super: launcher (GNOME: Activities)
+      -- Tap Super: launcher (GNOME: Activities). Bound on release, when Super is
+      -- still among the held modifiers, hence "SUPER +". Hyprland disables
+      -- ("shadows") a binding for a key that is still held once another key is used
+      -- meanwhile, so Super+<key> doesn't open the launcher. Super+mouse sometimes
+      -- still does (README.md, "Problems").
+      hl.bind("SUPER + Super_L", hl.dsp.exec_cmd(launcher), { release = true })
       hl.bind("SUPER + A", hl.dsp.exec_cmd(launcher))                   -- GNOME: show apps
       hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd(terminal))
       hl.bind("SUPER + E", hl.dsp.exec_cmd(fileManager))                -- GNOME: home folder
@@ -315,6 +320,9 @@ in
       }
     '';
   };
+  # Home Manager also makes waybar WantedBy tray.target, which a tray applet
+  # service would start in GNOME sessions too. Start it with Hyprland only.
+  systemd.user.services.waybar.Install.WantedBy = lib.mkForce [ sessionTarget ];
 
   # Launcher (Super). It lists the same .desktop apps as GNOME's app grid.
   programs.fuzzel = {

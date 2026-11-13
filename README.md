@@ -148,15 +148,19 @@ temporary plaintext copy in RAM.
 | Change the password | `mkpasswd -m yescrypt`, then edit `secrets/secrets.yaml` and replace `user_password_hash` with the output. `passwd` doesn't work: the configuration resets it. |
 | Replace the SSH key | Edit `secrets/secrets.yaml` and paste the new keys into `ssh_id_ed25519` / `ssh_id_ed25519_pub`, each line indented by two spaces. |
 | Add or replace a VPN profile (no master key needed) | `mkdir -p secrets/wireguard && sops encrypt --filename-override secrets/wireguard/<name>.conf <downloaded>.conf > secrets/wireguard/<name>.conf`, then delete the download. `<name>` is 1–15 characters of `a-z`, `0-9` and `-`. |
-| Remove a VPN profile | `git rm secrets/wireguard/<name>.conf` |
+| Remove a VPN profile | `git rm secrets/wireguard/<name>.conf` (it is unloaded on the next switch) |
 | Show a VPN profile | `sudo env SOPS_AGE_KEY_FILE=/persist/sops/age/keys.txt "$(command -v sops)" decrypt secrets/wireguard/<name>.conf` |
 
 After any change: `git add` it, `nh os switch`, commit and push. Other machines
-pick it up with `git pull` and `nh os switch`.
+pick it up with `git pull` and `nh os switch`. `nh os switch` (and
+`nix flake check`) refuses to build if any file under `secrets/` isn't
+sops-encrypted, so a plaintext file is caught before it is committed.
 
 A VPN profile's key may only be connected from one machine at a time (the
-server would drop one of them). While connected, all traffic goes through the
-VPN. `nmcli connection modify --temporary <name> <setting> <value>` changes a
+server would drop one of them). While connected, all internet traffic goes
+through the VPN, and DNS lookups go only to the profile's DNS servers. The
+local network (printers, the router) is still reached directly, but names
+that only the router's DNS knows don't resolve until you disconnect. `nmcli connection modify --temporary <name> <setting> <value>` changes a
 profile until the next reboot or until profiles are reloaded by a switch that
 changes them.
 
@@ -293,7 +297,7 @@ Standalone helper scripts that aren't part of the system configuration live in
 
 | Script | Purpose |
 | --- | --- |
-| `factorio-setup-symlinks.sh` | For a standalone Factorio install in `~/factorio`: replaces its `config`, `mods`, `saves` and player-data files with symlinks into `~/.factorio`, so the data survives reinstalling the game. It deletes the existing copies in `~/factorio`, so move anything you want to keep into `~/.factorio` first. The standalone build is a generic Linux binary; on NixOS run it with `steam-run ~/factorio/bin/x64/factorio`. |
+| `factorio-setup-symlinks.sh` | For a standalone Factorio install in `~/factorio`: moves its `config`, `mods`, `saves` and player-data files into `~/.factorio` and leaves symlinks in their place, so the data survives reinstalling the game. Run it again after a reinstall to link the kept data into the new install. It never deletes anything: if an item exists in both places (or is a symlink to somewhere else), it lists it and exits before changing anything; keep one copy and run it again. The standalone build is a generic Linux binary; on NixOS run it with `steam-run ~/factorio/bin/x64/factorio`. |
 
 ## Problems
 
@@ -303,3 +307,7 @@ Standalone helper scripts that aren't part of the system configuration live in
   the keyboard.
 - Having a dedicated gpu and iGPU sometimes confuses hyprland. If this happens, either
   disable the iGPU or point Hyprland at the right card
+- Releasing Super after Super+scroll or Super+click sometimes opens the
+  launcher as if Super had been tapped (Super+<key> doesn't). It happened in 1
+  of 3 runs of a VM test that pressed real keys; the cause wasn't found, and
+  the Hyprland session is unfinished for now.

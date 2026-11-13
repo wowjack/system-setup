@@ -23,6 +23,13 @@ decrypted on the machine by sops-nix (README.md, "Secrets").
 - **What is public.** The encrypted files reveal the secrets' names (keys in
   `secrets.yaml`, VPN profile file names), their approximate sizes, when they
   changed, and the master public key. Values are encrypted.
+- **Plaintext is refused.** The system build and `nix flake check` fail if any
+  file under `secrets/` isn't sops-encrypted (`modules/nixos/secrets.nix`), so
+  a decrypted or never-encrypted file is caught by `nh os switch` before it is
+  committed. Nothing stops a commit made without building first.
+- **VPN DNS.** While a VPN profile is connected, only its DNS servers are used,
+  so lookups can't fall back to the router's DNS server outside the tunnel.
+  Traffic to the local network itself still bypasses the tunnel.
 - **Decrypted copies.** sops-nix writes secrets to `/run/secrets`, which is
   `ramfs`: never written to disk, not even to swap. Owners: the password hash
   root-only, the SSH keys `user` (private key mode 0400). WireGuard profiles
@@ -60,6 +67,11 @@ Chromecasts, file shares) can be discovered. To turn it off, set
 - **No encryption.** The disk is not encrypted (a deliberate choice), so
   anyone with physical access to the disk or machine can read all data on it,
   including `/home` and saved Wi-Fi/VPN credentials.
+- **No boot-menu editor.** systemd-boot's kernel-parameter editor is off
+  (`hosts/nixos/default.nix`), so the boot menu can't be used for a passwordless
+  root shell (`init=/bin/sh`). With an unencrypted disk this only adds
+  protection together with a firmware password and a locked boot order;
+  otherwise booting from a USB stick gives the same access.
 - **Snapshots keep deleted files.** snapper snapshots `/home` hourly and daily,
   so a deleted or overwritten file stays readable in `/home/.snapshots` for up
   to 7 days. To remove something sensitive for good, also delete the snapshots

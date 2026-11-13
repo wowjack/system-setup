@@ -64,6 +64,8 @@
         inherit pkgs self;
         hmLib = home-manager.lib.hm;
         diskoLib = disko.lib;
+        # The function the disko CLI evaluates (README.md, "Installing", step 4).
+        diskoCli = import "${disko}/cli.nix";
         sopsModule = sops-nix.nixosModules.sops;
         homeManagerModule = home-manager.nixosModules.home-manager;
         nixos = mkNixos ./checks/stub-hardware.nix;

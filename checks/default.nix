@@ -4,24 +4,47 @@
   self,
   hmLib,
   diskoLib,
+  diskoCli,
   sopsModule,
   homeManagerModule,
   # The full system, evaluated against ./stub-hardware.nix.
   nixos,
 }:
 let
+  inherit (pkgs) lib;
   home = nixos.config.home-manager.users.user;
+
+  # A derivation that fails with `message` unless `ok`.
+  assertCheck =
+    name: ok: message:
+    pkgs.runCommand name { } (
+      if ok then
+        "touch $out"
+      else
+        ''
+          echo ${lib.escapeShellArg message} >&2
+          exit 1
+        ''
+    );
 in
 {
   # Evaluate the whole system (every module, assertion and package derivation)
   # without building it. Catches option typos, type errors, and disallowed unfree
   # packages before the real hardware-configuration.nix exists.
-  # Also instantiates disko's install-time partitioning script for hosts/nixos/disko.nix.
+  # Also instantiates disko's partitioning script for hosts/nixos/disko.nix, both
+  # through the NixOS module and exactly as the install command in README.md
+  # builds it with the disko CLI.
   nixos-eval =
     let
       inherit (nixos.config.system.build) toplevel diskoScript;
+      diskoCliScript = diskoCli {
+        inherit pkgs;
+        mode = "destroy,format,mount";
+        diskoFile = ../hosts/nixos/disko.nix;
+        device = "/dev/disk/by-id/check";
+      };
     in
-    builtins.deepSeq [ toplevel.drvPath diskoScript.drvPath ] (
+    builtins.deepSeq [ toplevel.drvPath diskoScript.drvPath diskoCliScript.drvPath ] (
       pkgs.runCommand "nixos-eval" { } "touch $out"
     );
 
@@ -31,6 +54,9 @@ in
   # Secrets are decrypted and installed: login password, SSH keys, WireGuard
   # profiles (VM test; needs KVM).
   secrets = import ./secrets.nix { inherit pkgs sopsModule homeManagerModule; };
+
+  # Every file under secrets/ is sops-encrypted (modules/nixos/secrets.nix).
+  secrets-encrypted = nixos.config.system.build.secretsEncrypted;
 
   # The WireGuard profile converter (modules/nixos/wireguard/nm_profile.py).
   wireguard-profile = import ./wireguard-profile.nix { inherit pkgs; };
@@ -55,7 +81,30 @@ in
         touch $out
       '';
 
+  # Hyprland's helpers (bar, idle/lock, notifications, ...) never start in GNOME:
+  # every user service started by hyprland-session.target is started by nothing else.
+  hyprland-session-services =
+    let
+      target = "hyprland-session.target";
+      helpers = lib.filterAttrs (
+        _: service: builtins.elem target (service.Install.WantedBy or [ ])
+      ) home.systemd.user.services;
+      shared = lib.attrNames (
+        lib.filterAttrs (_: service: service.Install.WantedBy != [ target ]) helpers
+      );
+    in
+    assertCheck "hyprland-session-services" (helpers != { } && shared == [ ])
+      "Hyprland helpers also wanted by other targets (they would start in GNOME too): ${lib.concatStringsSep ", " shared}";
+
+  # utils/factorio-setup-symlinks.sh moves data and links it, and refuses conflicts.
+  factorio-symlinks = import ./factorio-symlinks.nix { inherit pkgs; };
+
   lint =
+    let
+      # Written by nixos-generate-config on the machine (README.md, "Installing"):
+      # its formatting and unused arguments are the generator's.
+      generated = "hosts/nixos/hardware-configuration.nix";
+    in
     pkgs.runCommand "lint"
       {
         nativeBuildInputs = with pkgs; [
@@ -63,15 +112,17 @@ in
           statix
           deadnix
           ruff
+          shellcheck
         ];
       }
       ''
         cd ${self}
-        find . -name '*.nix' -print0 | xargs -0 nixfmt --check
-        statix check .
-        deadnix --fail .
+        find . -name '*.nix' -not -path './${generated}' -print0 | xargs -0 nixfmt --check
+        statix check --ignore '${generated}' .
+        deadnix --fail --exclude '${generated}' .
         ruff check --no-cache .
         ruff format --check --no-cache .
+        find . -name '*.sh' -print0 | xargs -0 -r shellcheck
         touch $out
       '';
 }

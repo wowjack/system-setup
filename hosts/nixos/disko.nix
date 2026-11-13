@@ -11,7 +11,10 @@
 #
 # The subvolumes are laid out for impermanence (wiping / on every boot) later:
 # everything that must survive such a wipe lives outside the /root subvolume.
-{ device }:
+#
+# `...` is required: the disko CLI calls this function with all of its own
+# arguments (lib, mode, diskoFile, ...) in addition to `device`.
+{ device, ... }:
 let
   mountOptions = [
     "compress=zstd" # transparent compression

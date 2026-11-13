@@ -95,8 +95,11 @@ The NixOS configuration imports the file to generate `fileSystems` and
 was chosen.
 
 `storage.nix` adds zram swap (compressed RAM, up to half of it, used before the
-swapfile), a monthly `btrfs scrub`, and snapper's timeline for `/home`: hourly
-snapshots kept 24 hours and daily ones kept 7 days.
+swapfile), a monthly `btrfs scrub`, and snapper's timeline for `/home`: the
+last 6 hourly snapshots and daily ones kept 7 days. Hourly snapshots are few
+because `/home` holds large, often rewritten data (Steam games, Docker images,
+downloads) on the same disk as `/` and `/nix`, and every snapshot pins the old
+versions.
 
 #### Impermanence later
 
@@ -130,7 +133,9 @@ Secrets are committed encrypted with sops, to one age public key
 (`.sops.yaml`). The matching private key, the master key, lives in the
 password manager and at `/persist/sops/age/keys.txt` on each machine. The Nix
 configuration only refers to secrets by name and path, so no secret value ever
-reaches the Nix store.
+reaches the Nix store. Because the repository is public, `secrets.nix` adds a
+build step (`system.checks`, also `checks.secrets-encrypted`) that fails if any
+file under `secrets/` isn't sops-encrypted.
 
 sops-nix decrypts them during activation, on boot and on every switch:
 
@@ -147,10 +152,13 @@ sops-nix decrypts them during activation, on boot and on every switch:
   profile changes (`restartUnits`). It converts each file with
   `wireguard/nm_profile.py`, which calls NetworkManager's own WireGuard
   importer through libnm, then turns off autoconnect, sets a UUID derived from
-  the name, and writes the profile to
+  the name, makes the profile's DNS servers the only ones used while it is
+  connected (negative `dns-priority`; otherwise the router's DNS server stays
+  as a fallback outside the tunnel), and writes the profile to
   `/run/NetworkManager/system-connections`. That makes it an in-memory
-  profile: it is rebuilt from the secret on every boot, and removed profiles
-  vanish. NixOS's `networking.networkmanager.ensureProfiles` isn't used,
+  profile: it is rebuilt from the secret on every boot. The service exists
+  even without profiles, so removing the last one still unloads it on the
+  next switch. NixOS's `networking.networkmanager.ensureProfiles` isn't used,
   because it only fills secret values into fixed fields, and the downloaded
   files differ in structure (e.g. with or without IPv6).
 
@@ -183,7 +191,9 @@ GNOME keyring (unlocked by GDM's PAM stack) and PipeWire:
   provides some things itself that Hyprland needs as separate programs: a bar
   (waybar), a launcher (fuzzel), notifications (mako), the wallpaper (swaybg),
   a polkit agent, idle handling (hypridle) and a lock screen (hyprlock). All of
-  them run as systemd user services wanted by `hyprland-session.target`. Only
+  them run as systemd user services wanted by `hyprland-session.target` and
+  nothing else (Home Manager would also attach waybar to `tray.target`; that is
+  overridden, and `checks.hyprland-session-services` enforces it). Only
   Hyprland starts that target at login, so none of them ever run under GNOME.
   This is also why the NixOS `programs.hyprlock` module and Home Manager's
   D-Bus-activated `services.mako` are deliberately not used.
@@ -197,14 +207,17 @@ interval in ms becomes Hyprland's repeat rate per second).
 ### Checks (`checks/`)
 
 Derivations that `nix flake check` builds. They evaluate the system against
-`checks/stub-hardware.nix`, validate the dconf settings and the Hyprland config,
-test the disk layout and the secrets setup in VMs, and lint the repository. See
-TESTING.md.
+`checks/stub-hardware.nix` (and build the partitioning script the way the
+disko CLI does), validate the dconf settings and the Hyprland config and
+session services, check that every secret is encrypted, test the disk layout
+and the secrets setup in VMs, test the Factorio utility script, and lint the
+repository. See TESTING.md.
 
 ### Utilities (`utils/`)
 
-Standalone helper scripts that you run by hand. They are not part of the flake
-and nothing in the system configuration uses them.
+Standalone helper scripts that you run by hand. Nothing in the system
+configuration uses them; `checks.lint` shellchecks them, and
+`checks.factorio-symlinks` tests the Factorio script.
 
 ## Design decisions
 

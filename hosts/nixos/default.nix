@@ -16,6 +16,9 @@
       enable = true;
       # Keep /boot from filling up with old generations.
       configurationLimit = 10;
+      # No editing of kernel parameters from the boot menu: `init=/bin/sh` there
+      # would give a root shell without a password (SECURITY.md, "Disk").
+      editor = false;
     };
     efi.canTouchEfiVariables = true;
   };

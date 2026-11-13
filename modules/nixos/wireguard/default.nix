@@ -5,7 +5,8 @@
 # On boot and whenever a profile changes, each one is decrypted, converted by
 # NetworkManager's own WireGuard importer (./nm_profile.py) and loaded as an
 # in-memory NetworkManager profile. Profiles never connect on their own; turn
-# them on and off with `nmcli connection up/down <name>`.
+# them on and off with `nmcli connection up/down <name>`. A removed profile is
+# unloaded on the next switch.
 {
   config,
   lib,
@@ -38,7 +39,9 @@ in
     '';
   };
 
-  config = lib.mkIf (profiles != { }) {
+  # Defined even without profiles: when the last one is removed, the service's
+  # next run (on that switch) still deletes its loaded profile.
+  config = {
     assertions = map (name: {
       # Interface names are limited to 15 characters.
       assertion = builtins.match "[a-z0-9-]{1,15}" name != null;

@@ -2,7 +2,35 @@
 # On boot and on every switch, sops-nix decrypts them into /run/secrets (kept
 # in RAM, never on disk) with the master age key. That key is never in this
 # repository: it is copied from the password manager to the path below.
+{ pkgs, ... }:
+let
+  # The repository is public, so every file under secrets/ must be sops-encrypted.
+  # Built with the system (so `nh os switch` refuses a plaintext file before it is
+  # committed) and by `nix flake check` (checks.secrets-encrypted). sops-nix's own
+  # validation doesn't cover this: it accepts any parseable YAML.
+  secretsEncrypted =
+    pkgs.runCommand "secrets-encrypted"
+      {
+        nativeBuildInputs = [ pkgs.sops ];
+        secrets = ../../secrets;
+      }
+      ''
+        failed=0
+        while IFS= read -r -d "" file; do
+          # Prints {"encrypted":true} for a sops file; fails on one it can't parse.
+          if [ "$(sops filestatus "$file" 2>/dev/null)" != '{"encrypted":true}' ]; then
+            echo "not sops-encrypted: secrets/''${file#"$secrets"/}" >&2
+            failed=1
+          fi
+        done < <(find "$secrets" -type f -print0)
+        [ "$failed" -eq 0 ]
+        touch $out
+      '';
+in
 {
+  system.checks = [ secretsEncrypted ];
+  system.build.secretsEncrypted = secretsEncrypted;
+
   sops = {
     defaultSopsFile = ../../secrets/secrets.yaml;
     age.keyFile = "/persist/sops/age/keys.txt";
