@@ -8,7 +8,7 @@
 
   users.users.user = {
     isNormalUser = true;
-    description = "Jack Kingham";
+    description = "Jack";
     hashedPasswordFile = config.sops.secrets.user_password_hash.path;
     extraGroups = [
       "wheel" # sudo

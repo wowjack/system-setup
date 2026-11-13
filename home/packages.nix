@@ -36,6 +36,7 @@ in
     tmux
     tree
     wget
+    amdgpu_top
 
     # Scratch Python for quick REPL work. Project dependencies belong in the
     # project's devShell; `pip install` into this interpreter is not possible.
@@ -66,6 +67,9 @@ in
 
     # Security
     bitwarden-desktop
+
+    # LLMs
+    claude-code
 
     # GNOME
     gnome-extension-manager

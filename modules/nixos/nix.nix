@@ -50,5 +50,6 @@
       "steam-unwrapped"
       "vscode"
       "zoom"
+      "claude-code"
     ];
 }
