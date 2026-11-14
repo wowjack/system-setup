@@ -1,10 +1,17 @@
-Dotfiles and stuff for my workstation: NixOS 26.05 for the system and
-Home Manager for my user.
+Dotfiles and stuff for my machines: NixOS 26.05 for the system and
+Home Manager for my user. Each machine (host) has a directory under `hosts/`
+and is listed in `hosts` in `flake.nix`; everything else is shared.
+
+| Host | Machine |
+| --- | --- |
+| `desktop` | my desktop workstation |
 
 ## Everyday commands
 
 The `nh os` commands work from any directory & use this repository at
-`~/repos/system-setup`
+`~/repos/system-setup`. They build the configuration named after the machine's
+hostname (`nixosConfigurations.<host>`); pass `-H <host>` to pick another, e.g.
+for the first switch after a host is renamed.
 
 | Task                                                        | Command                                                                                           |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -21,6 +28,7 @@ The `nh os` commands work from any directory & use this repository at
 | Change a secret (password, SSH key, VPN profile)            | see [Secrets](#secrets)                                                                           |
 | Free disk space now                                         | `nh clean all --keep-since 14d --keep 5 --keep-one` (also runs weekly)                            |
 | Run all checks                                              | `nix flake check`                                                                                 |
+| Build one check (e.g. evaluate one host)                    | `nix build .#checks.x86_64-linux.<check>`, e.g. `nixos-eval-desktop`                              |
 | Format the Nix files                                        | `nix fmt`                                                                                         |
 | Development shell (formatter, linters, Nix language server, sops) | `nix develop`, or `direnv allow` once                                                        |
 
@@ -32,9 +40,33 @@ new files before rebuilding.
 ## Installing on a new machine
 
 The disk layout (btrfs subvolumes, swapfile) is created by
-[disko](https://github.com/nix-community/disko) from `hosts/nixos/disko.nix`,
+[disko](https://github.com/nix-community/disko) from `hosts/<host>/disko.nix`,
 so install from a terminal in the live session instead of the graphical
 installer. **This erases the chosen disk.** Back up anything on it first.
+
+Below, `<host>` is the machine's name in this repository (e.g. `desktop`). To
+reinstall an existing host, start at step 1. A new machine needs a host first.
+
+### Adding a host
+
+Do this on a machine that already runs this configuration (so `nix flake check`
+can check it), then push it:
+
+1. Copy an existing host: `cp -r hosts/desktop hosts/<host>`, then
+   `rm hosts/<host>/hardware-configuration.nix` (it is generated for each
+   machine in step 6 below).
+2. In `hosts/<host>/default.nix`, set `networking.hostName = "<host>";` (it must
+   match the directory name; `checks.nixos-eval-<host>` enforces this) and
+   adjust the timezone. Set `system.stateVersion` to the NixOS release you
+   install with. Adjust `hosts/<host>/disko.nix` if the machine needs a
+   different disk layout (e.g. swapfile size).
+3. Add `"<host>"` to `hosts` in `flake.nix`.
+4. `git add hosts/<host>`, run `nix flake check`, commit and push.
+
+Until its hardware file exists, the host has no `nixosConfigurations` entry;
+`checks.nixos-eval-<host>` evaluates it against stub hardware instead.
+
+### Installing
 
 1. Boot the NixOS 26.05 graphical ISO, connect to the network, and open a
    terminal. Don't start the graphical installer.
@@ -60,7 +92,7 @@ installer. **This erases the chosen disk.** Back up anything on it first.
    ```sh
    nix --extra-experimental-features "nix-command flakes" build .#disko
    sudo ./result/bin/disko --mode destroy,format,mount \
-     --argstr device /dev/disk/by-id/<disk> hosts/nixos/disko.nix
+     --argstr device /dev/disk/by-id/<disk> hosts/<host>/disko.nix
    rm result
    ```
 
@@ -85,12 +117,12 @@ installer. **This erases the chosen disk.** Back up anything on it first.
 6. Generate the hardware configuration for this machine (kernel modules, CPU
    microcode). `--no-filesystems` because disko already describes them. Until
    this file exists and is tracked by git, the flake deliberately has no
-   `nixos` configuration.
+   configuration for the host. Reinstalling an existing host replaces its file.
 
    ```sh
    sudo nixos-generate-config --no-filesystems --root /mnt --show-hardware-config \
-     > hosts/nixos/hardware-configuration.nix
-   git add hosts/nixos/hardware-configuration.nix
+     > hosts/<host>/hardware-configuration.nix
+   git add hosts/<host>/hardware-configuration.nix
    ```
 
 7. Copy the repository into the new system and install it. Root gets no
@@ -100,7 +132,7 @@ installer. **This erases the chosen disk.** Back up anything on it first.
    ```sh
    sudo mkdir -p /mnt/home/user/repos
    sudo cp -r . /mnt/home/user/repos/system-setup
-   sudo nixos-install --flake /mnt/home/user/repos/system-setup#nixos --no-root-passwd
+   sudo nixos-install --flake /mnt/home/user/repos/system-setup#<host> --no-root-passwd
    ```
 
 8. Give `user` its home directory (the password comes from the secrets):
@@ -109,8 +141,8 @@ installer. **This erases the chosen disk.** Back up anything on it first.
    sudo nixos-enter --root /mnt -c 'chown -R user:users /home/user'
    ```
 
-9. Reboot into the new system and commit `hosts/nixos/hardware-configuration.nix`
-   (it contains no secrets).
+9. Reboot into the new system, then commit and push
+   `hosts/<host>/hardware-configuration.nix` (it contains no secrets).
 
 ### Finishing checklist
 
@@ -248,7 +280,7 @@ direnv allow   # trust this .envrc; repeat after you edit it
 | -------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Nix tooling    | `modules/nixos/nix.nix`            | nh, comma, nix-index (command-not-found, `nix-locate`)                                                                                                |
 | Secrets        | `modules/nixos/secrets.nix`, `modules/nixos/wireguard/`, `home/ssh.nix` | sops-nix: login password, SSH key pair, WireGuard VPN profiles (see [Secrets](#secrets))                               |
-| Storage        | `hosts/nixos/disko.nix`, `modules/nixos/storage.nix` | btrfs subvolumes (zstd compression, noatime), zram + 8 GB swapfile, monthly scrub, hourly/daily snapper snapshots of /home |
+| Storage        | `hosts/<host>/disko.nix`, `modules/nixos/storage.nix` | btrfs subvolumes (zstd compression, noatime), zram + 8 GB swapfile, monthly scrub, hourly/daily snapper snapshots of /home |
 | Desktop        | `modules/nixos/desktop.nix`        | GDM, GNOME, Hyprland, NetworkManager, Bluetooth, PipeWire                                                                                             |
 | Gaming         | `modules/nixos/gaming.nix`         | Steam                                                                                                                                                 |
 | Virtualisation | `modules/nixos/virtualisation.nix` | rootless Docker, libvirt/QEMU/KVM, virt-manager                                                                                                       |

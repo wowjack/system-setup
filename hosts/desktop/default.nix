@@ -9,7 +9,7 @@
     (import ./disko.nix { device = "/dev/disk/by-id/chosen-at-install"; })
   ];
 
-  networking.hostName = "nixos";
+  networking.hostName = "desktop";
 
   boot.loader = {
     systemd-boot = {

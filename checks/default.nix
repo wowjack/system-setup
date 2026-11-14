@@ -7,11 +7,14 @@
   diskoCli,
   sopsModule,
   homeManagerModule,
-  # The full system, evaluated against ./stub-hardware.nix.
-  nixos,
+  # Every host's full system, evaluated against ./stub-hardware.nix: { <host> = nixosSystem; }.
+  systems,
 }:
 let
   inherit (pkgs) lib;
+  # The desktop and Home Manager checks below test the configuration the desktop
+  # host uses (modules/nixos, home/).
+  nixos = systems.desktop;
   home = nixos.config.home-manager.users.user;
 
   # A derivation that fails with `message` unless `ok`.
@@ -27,27 +30,35 @@ let
         ''
     );
 in
-{
-  # Evaluate the whole system (every module, assertion and package derivation)
-  # without building it. Catches option typos, type errors, and disallowed unfree
-  # packages before the real hardware-configuration.nix exists.
-  # Also instantiates disko's partitioning script for hosts/nixos/disko.nix, both
-  # through the NixOS module and exactly as the install command in README.md
-  # builds it with the disko CLI.
-  nixos-eval =
+# Evaluate each host's whole system (every module, assertion and package
+# derivation) without building it. Catches option typos, type errors, and
+# disallowed unfree packages before the host's real hardware-configuration.nix
+# exists. Also instantiates disko's partitioning script for hosts/<host>/disko.nix,
+# both through the NixOS module and exactly as the install command in README.md
+# builds it with the disko CLI. And checks the hostname matches the directory
+# name, which `nh os switch` relies on to pick the host's configuration.
+lib.mapAttrs' (
+  host: system:
+  lib.nameValuePair "nixos-eval-${host}" (
     let
-      inherit (nixos.config.system.build) toplevel diskoScript;
+      inherit (system.config.system.build) toplevel diskoScript;
       diskoCliScript = diskoCli {
         inherit pkgs;
         mode = "destroy,format,mount";
-        diskoFile = ../hosts/nixos/disko.nix;
+        diskoFile = ../hosts/${host}/disko.nix;
         device = "/dev/disk/by-id/check";
       };
+      inherit (system.config.networking) hostName;
     in
+    assert lib.assertMsg (
+      hostName == host
+    ) "hosts/${host}: networking.hostName is \"${hostName}\", must be \"${host}\"";
     builtins.deepSeq [ toplevel.drvPath diskoScript.drvPath diskoCliScript.drvPath ] (
-      pkgs.runCommand "nixos-eval" { } "touch $out"
-    );
-
+      pkgs.runCommand "nixos-eval-${host}" { } "touch $out"
+    )
+  )
+) systems
+// {
   # The disk layout formats, mounts and boots (VM test; needs KVM).
   disko-layout = import ./disko-layout.nix { inherit pkgs diskoLib; };
 
@@ -101,9 +112,9 @@ in
 
   lint =
     let
-      # Written by nixos-generate-config on the machine (README.md, "Installing"):
-      # its formatting and unused arguments are the generator's.
-      generated = "hosts/nixos/hardware-configuration.nix";
+      # Written by nixos-generate-config on each machine (README.md, "Installing"):
+      # their formatting and unused arguments are the generator's.
+      generated = "hosts/*/hardware-configuration.nix";
     in
     pkgs.runCommand "lint"
       {
@@ -119,7 +130,9 @@ in
         cd ${self}
         find . -name '*.nix' -not -path './${generated}' -print0 | xargs -0 nixfmt --check
         statix check --ignore '${generated}' .
-        deadnix --fail --exclude '${generated}' .
+        # --exclude takes file names (expanded by the shell) and any number of
+        # them, so `--` ends the list; otherwise it swallows `.` and checks nothing.
+        deadnix --fail --exclude ${generated} -- .
         ruff check --no-cache .
         ruff format --check --no-cache .
         find . -name '*.sh' -print0 | xargs -0 -r shellcheck

@@ -3,7 +3,7 @@
 #
 # Language toolchains (Rust, Node, Go, Java, ...) are intentionally absent:
 # declare them per project in a flake devShell and load them with direnv.
-{ lib, pkgs, ... }:
+{ pkgs, ... }:
 let
   vscode_1_119 = pkgs.vscode.overrideAttrs {
     version = "1.119.0";
@@ -52,6 +52,7 @@ in
     # Media
     vlc
     obs-studio
+    easyeffects
 
     # Security
     bitwarden-desktop

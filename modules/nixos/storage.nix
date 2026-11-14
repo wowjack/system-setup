@@ -1,4 +1,4 @@
-# Services for the btrfs disk layout in hosts/nixos/disko.nix.
+# Services for the btrfs disk layout in hosts/<host>/disko.nix.
 {
   # Compressed swap in RAM (up to half of it). Used before the 8 GB swapfile,
   # which only takes overflow.

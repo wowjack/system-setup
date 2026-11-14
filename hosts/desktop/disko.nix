@@ -3,7 +3,7 @@
 #
 # - At install time, disko ERASES the chosen disk and creates this layout
 #   (see README.md):
-#     disko --mode destroy,format,mount --argstr device /dev/disk/by-id/<disk> hosts/nixos/disko.nix
+#     disko --mode destroy,format,mount --argstr device /dev/disk/by-id/<disk> hosts/desktop/disko.nix
 # - The NixOS configuration (./default.nix) imports it to generate the
 #   filesystem and swap entries. Those refer to partitions by label
 #   (disk-main-ESP, disk-main-root), so the installed system doesn't need to

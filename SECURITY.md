@@ -68,7 +68,8 @@ Chromecasts, file shares) can be discovered. To turn it off, set
   anyone with physical access to the disk or machine can read all data on it,
   including `/home` and saved Wi-Fi/VPN credentials.
 - **No boot-menu editor.** systemd-boot's kernel-parameter editor is off
-  (`hosts/nixos/default.nix`), so the boot menu can't be used for a passwordless
+  (set per host in `hosts/<host>/default.nix`; a new host must keep it), so
+  the boot menu can't be used for a passwordless
   root shell (`init=/bin/sh`). With an unencrypted disk this only adds
   protection together with a firmware password and a locked boot order;
   otherwise booting from a USB stick gives the same access.

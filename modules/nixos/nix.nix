@@ -52,4 +52,8 @@
       "zoom"
       "claude-code"
     ];
+
+  nixpkgs.config.permittedInsecurePackages = [
+
+  ];
 }

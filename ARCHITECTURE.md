@@ -1,22 +1,25 @@
 # Architecture
 
-This repository is a Nix flake whose main output is one NixOS system,
-`nixosConfigurations.nixos`. `nixos-rebuild` evaluates it into a single
-immutable system closure in `/nix/store` and activates it. Nothing is installed
+This repository is a Nix flake whose main outputs are NixOS systems, one per
+machine (host): `nixosConfigurations.<host>`, currently only `desktop`. They
+share all modules and differ only in their `hosts/<host>/` directory.
+`nixos-rebuild` evaluates a host into a single immutable system closure in `/nix/store` and activates it. Nothing is installed
 imperatively. Every rebuild produces a new generation, and older generations
 remain bootable until garbage-collected.
 
 ```
 flake.nix ── inputs (pinned in flake.lock): nixpkgs nixos-26.05, home-manager release-26.05,
  │            nix-index-database (prebuilt package index), disko (disk partitioning),
- │            sops-nix (secrets); all follow the same nixpkgs
+ │            sops-nix (secrets), claude-code (overlay); all follow the same nixpkgs
  │
- ├─ nixosConfigurations.nixos = nixosSystem [
+ ├─ nixosConfigurations.<host> = mkNixos <host>, for each host in `hosts` with a hardware file:
+ │   nixosSystem [
  │     home-manager.nixosModules.home-manager
  │     nix-index-database.nixosModules.nix-index
  │     disko.nixosModules.disko
  │     sops-nix.nixosModules.sops
- │     hosts/nixos/default.nix ──────── machine: hostname, bootloader, locale, stateVersion
+ │     { nixpkgs.overlays = [ claude-code ] }
+ │     hosts/<host>/default.nix ─────── machine: hostname, bootloader, locale, stateVersion
  │       ├─ disko.nix ───────────────── disk layout: ESP + btrfs subvolumes
  │       └─ modules/nixos/ ──────────── system (root-owned) configuration
  │            ├─ nix.nix               flakes, nh (rebuilds, cleanup), comma, store optimisation, unfree allowlist
@@ -27,7 +30,7 @@ flake.nix ── inputs (pinned in flake.lock): nixpkgs nixos-26.05, home-manage
  │            ├─ virtualisation.nix    rootless Docker, libvirt, virt-manager
  │            ├─ gaming.nix            Steam
  │            └─ users.nix             user `user`, Home Manager wiring ──┐
- │     hosts/nixos/hardware-configuration.nix (generated on the machine)  │
+ │     hosts/<host>/hardware-configuration.nix (generated on the machine) │
  │   ]                                                                    │
  │                                                                        ▼
  │   home/ ───────────────────────────────────── Home Manager config for `user`
@@ -59,20 +62,37 @@ nixpkgs instance (`useGlobalPkgs`), so there is one package set and one unfree
 allowlist. `flake.lock` pins exact revisions. Packages change only when
 `nix flake update` is run and the new lock file is committed.
 
-`nixosConfigurations.nixos` is defined only once
-`hosts/nixos/hardware-configuration.nix` exists and is tracked by git. That file
-comes from `nixos-generate-config` on the real machine. Without this guard, a
-system could be built against made-up disks.
+`mkNixos <host> <hardware module>` builds a host's system from the shared
+modules, `hosts/<host>/` and a hardware module. `nixosConfigurations.<host>`
+is defined only for hosts in the `hosts` list whose
+`hosts/<host>/hardware-configuration.nix` exists and is tracked by git. That
+file comes from `nixos-generate-config` on the real machine. Without this
+guard, a system could be built against made-up disks. The checks call
+`mkNixos` for every host with `checks/stub-hardware.nix` instead, so a host is
+evaluated before it is installed.
 
-### Host (`hosts/nixos/`)
+### Hosts (`hosts/<host>/`)
 
-Settings that belong to this particular machine: hostname, bootloader,
-timezone, locale, `system.stateVersion`, the disk layout, and the generated
-hardware configuration (created with `--no-filesystems`, because disko defines
-the filesystems). A second machine would get its own directory here and reuse
-`modules/nixos`.
+Settings that belong to one particular machine. Each host directory has:
 
-### Disk layout (`hosts/nixos/disko.nix`, `modules/nixos/storage.nix`)
+| File | Contents |
+| --- | --- |
+| `default.nix` | hostname, bootloader, timezone, locale, `system.stateVersion`; imports `modules/nixos` and `disko.nix` |
+| `disko.nix` | the disk layout (below) |
+| `hardware-configuration.nix` | generated on the machine with `--no-filesystems`, because disko defines the filesystems; not linted |
+
+`networking.hostName` must equal the directory name (and the name in `hosts`):
+`nh os switch` picks the configuration by the running machine's hostname.
+`checks.nixos-eval-<host>` enforces it. Adding a host is described in
+README.md, "Adding a host".
+
+| Host | Notes |
+| --- | --- |
+| `desktop` | the workstation; its disk layout is the one tested by `checks.disko-layout` |
+
+### Disk layout (`hosts/<host>/disko.nix`, `modules/nixos/storage.nix`)
+
+Described here for `desktop`; a new host starts from a copy of it.
 
 One GPT disk. A 1 GB EFI system partition holds `/boot` (systemd-boot). The
 rest is one btrfs filesystem split into subvolumes, all mounted with
@@ -206,8 +226,8 @@ interval in ms becomes Hyprland's repeat rate per second).
 
 ### Checks (`checks/`)
 
-Derivations that `nix flake check` builds. They evaluate the system against
-`checks/stub-hardware.nix` (and build the partitioning script the way the
+Derivations that `nix flake check` builds. They evaluate every host against
+`checks/stub-hardware.nix` (and build each partitioning script the way the
 disko CLI does), validate the dconf settings and the Hyprland config and
 session services, check that every secret is encrypted, test the disk layout
 and the secrets setup in VMs, test the Factorio utility script, and lint the
